@@ -1,120 +1,119 @@
-# BeMore - Multimodal Emotion Analysis & CBT Feedback
+# BeMore - 멀티모달 감정 분석 & CBT 피드백 서비스
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/BeMore-CapstoneDesign/bemoreFrontend)
 
-> **BeMore** is an AI-powered web service for multimodal emotion analysis and CBT (Cognitive Behavioral Therapy) feedback. Analyze your emotions through facial expressions, voice, and text, and receive personalized feedback and visualized reports.
+> **BeMore**는 AI 기반 멀티모달 감정 분석과 CBT(인지행동치료) 피드백을 제공하는 웹 서비스입니다. 표정, 음성, 텍스트를 통해 감정을 분석하고, 맞춤형 피드백과 시각화 리포트를 제공합니다.
 
 ---
 
-## 📂 Folder Structure
+## 📂 폴더 구조
 
 ```
 bemore-frontend/
-├── public/                   # Static assets (images, icons)
+├── public/                   # 정적 자산 (이미지, 아이콘 등)
 ├── src/
 │   ├── app/                  # Next.js App Router
-│   │   ├── page.tsx         # Home page
-│   │   ├── analysis/        # Emotion analysis page
-│   │   ├── chat/            # AI chat page
-│   │   ├── history/         # History page
-│   │   └── settings/        # Settings page
-│   ├── components/          # Reusable UI components
-│   │   ├── ui/              # Basic UI components
-│   │   ├── layout/          # Layout components
-│   │   └── hoc/             # Higher-order components
-│   ├── modules/             # Business logic
-│   │   └── stores/          # Zustand state management
-│   ├── services/            # API services & repositories
-│   ├── hooks/               # Custom React hooks
-│   ├── utils/               # Utility functions
-│   └── types/               # TypeScript types
-├── .env.example             # Environment variable example
-├── package.json             # Project config
-├── README.md                # Project documentation
-└── ARCHITECTURE.md          # Architecture documentation
+│   │   ├── page.tsx         # 홈 페이지
+│   │   ├── analysis/        # 감정 분석 페이지
+│   │   ├── chat/            # AI 채팅 페이지
+│   │   ├── history/         # 히스토리 페이지
+│   │   └── settings/        # 설정 페이지
+│   ├── components/          # 재사용 UI 컴포넌트
+│   │   ├── ui/              # 기본 UI 컴포넌트
+│   │   ├── layout/          # 레이아웃 컴포넌트
+│   │   └── hoc/             # 고차 컴포넌트
+│   ├── modules/             # 비즈니스 로직
+│   │   └── stores/          # Zustand 상태 관리
+│   ├── services/            # API 서비스 및 레포지토리
+│   ├── hooks/               # 커스텀 React 훅
+│   ├── utils/               # 유틸리티 함수
+│   └── types/               # TypeScript 타입 정의
+├── .env.example             # 환경 변수 예시
+├── package.json             # 프로젝트 설정
+├── README.md                # 프로젝트 문서
+└── ARCHITECTURE.md          # 아키텍처 문서
 ```
 
 ---
 
-## 🚀 Features
+## 🚀 주요 기능
 
-### 📊 Emotion Analysis (Analysis)
-- Facial analysis: Camera or image upload
-- Voice analysis: Real-time recording or audio upload
-- Text analysis: Input emotional text
-- VAD visualization: Valence, Arousal, Dominance charts
-- CBT feedback: Cognitive distortion detection & suggestions
+### 📊 감정 분석 (Analysis)
+- 표정 분석: 카메라 촬영 또는 이미지 업로드
+- 음성 분석: 실시간 녹음 또는 오디오 파일 업로드
+- 텍스트 분석: 감정이 담긴 텍스트 입력
+- VAD 시각화: Valence, Arousal, Dominance 차트
+- CBT 피드백: 인지 왜곡 탐지 및 대안 제시
 
-### 💬 AI Chat (Chat)
-- Gemini-powered AI counseling
-- Context-aware responses based on recent analysis
-- Quick suggestions for conversation starters
-- Real-time typing indicator
+### 💬 AI 채팅 (Chat)
+- Gemini 기반 AI 상담
+- 최근 감정 분석 결과 기반 맞춤 응답
+- 감정별 빠른 제안 문구
+- 실시간 타이핑 인디케이터
 
-### 📈 History (History)
-- Track emotion changes over time
-- Visualize with line and pie charts
-- Filter by period, emotion, or search
-- Download PDF reports
+### 📈 히스토리 (History)
+- 감정 변화 추적 및 시각화(라인/파이 차트)
+- 기간/감정/검색어별 필터링
+- PDF 리포트 다운로드
 
-### ⚙️ Settings (Settings)
-- Profile management
-- Security (password, 2FA)
-- Notification preferences
-- Theme: Light/Dark/Auto
-
----
-
-## 🔗 Core API Endpoints
-
-| Method | Endpoint                                 | Description                |
-| ------ | ---------------------------------------- | -------------------------- |
-| POST   | `/api/emotion/analyze`                   | Multimodal emotion analysis|
-| POST   | `/api/chat/gemini`                       | AI chat message            |
-| GET    | `/api/history/:userId`                   | User emotion history       |
-| GET    | `/api/user/profile`                      | Get user profile           |
-| PUT    | `/api/user/profile`                      | Update user profile        |
-| POST   | `/api/history/session/:sessionId/pdf`    | Generate PDF report        |
+### ⚙️ 설정 (Settings)
+- 프로필 관리
+- 보안(비밀번호, 2FA)
+- 알림 설정
+- 테마(라이트/다크/자동)
 
 ---
 
-## 🛠️ Tech Stack
+## 🔗 주요 API 엔드포인트
 
-- **Next.js 15** (React framework)
-- **TypeScript** (type safety)
-- **TailwindCSS** (utility-first CSS)
-- **Zustand** (state management)
-- **Recharts** (data visualization)
-- **Lucide React** (icons)
-- **Axios** (API requests)
+| 메서드 | 엔드포인트                                 | 설명                 |
+| ------ | ---------------------------------------- | -------------------- |
+| POST   | `/api/emotion/analyze`                   | 멀티모달 감정 분석   |
+| POST   | `/api/chat/gemini`                       | AI 채팅 메시지 전송  |
+| GET    | `/api/history/:userId`                   | 사용자 감정 히스토리 |
+| GET    | `/api/user/profile`                      | 사용자 프로필 조회   |
+| PUT    | `/api/user/profile`                      | 사용자 프로필 수정   |
+| POST   | `/api/history/session/:sessionId/pdf`    | PDF 리포트 생성      |
 
 ---
 
-## ⚡ Getting Started
+## 🛠️ 기술 스택
 
-### Prerequisites
-- Node.js >= 18
-- npm or yarn
+- **Next.js 15** (React 프레임워크)
+- **TypeScript** (타입 안전성)
+- **TailwindCSS** (유틸리티 CSS)
+- **Zustand** (상태 관리)
+- **Recharts** (데이터 시각화)
+- **Lucide React** (아이콘)
+- **Axios** (API 요청)
+
+---
+
+## ⚡ 시작하기
+
+### 필수 요구사항
+- Node.js 18 이상
+- npm 또는 yarn
 - Git
 
-### Installation
+### 설치 및 실행
 
 ```bash
 git clone https://github.com/BeMore-CapstoneDesign/bemoreFrontend.git
 cd bemore-frontend
-npm install # or yarn install
+npm install # 또는 yarn install
 cp .env.example .env.local
 ```
 
-### Running the App
+### 개발 서버 실행
 
 ```bash
-npm run dev # or yarn dev
+npm run dev # 또는 yarn dev
 ```
 
-Visit: [http://localhost:3000](http://localhost:3000)
+브라우저에서 [http://localhost:3000](http://localhost:3000) 접속
 
-### Build & Lint
+### 빌드 & 린트
 
 ```bash
 npm run build
@@ -124,49 +123,49 @@ npm run lint
 
 ---
 
-## ⚙️ Environment Variables
+## ⚙️ 환경 변수
 
-| Variable                        | Description                | Default                      |
-| ------------------------------- | -------------------------- | ---------------------------- |
-| `NEXT_PUBLIC_API_URL`           | Backend API URL            | `http://localhost:3001/api`  |
-| `NEXT_PUBLIC_GEMINI_API_KEY`    | Google Gemini API Key      | -                            |
-| `NEXT_PUBLIC_ANALYSIS_SERVER_URL`| Analysis server URL        | -                            |
-| `NEXT_PUBLIC_APP_NAME`          | App name                   | `BeMore`                     |
-| `NEXT_PUBLIC_APP_VERSION`       | App version                | `0.1.0`                      |
-
----
-
-## 🧬 Ultrathink Engineering Principles
-- First-principles design: Always ask "Why this way?"
-- Domain separation: Clear responsibility per module
-- Performance: Memoization, selective state subscription
-- Scalability: Repository pattern, modular architecture
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for details.
+| 변수명                          | 설명                | 기본값                      |
+| ------------------------------- | ------------------- | --------------------------- |
+| `NEXT_PUBLIC_API_URL`           | 백엔드 API URL      | `http://localhost:3001/api` |
+| `NEXT_PUBLIC_GEMINI_API_KEY`    | Google Gemini API 키| -                           |
+| `NEXT_PUBLIC_ANALYSIS_SERVER_URL`| 분석 서버 URL       | -                           |
+| `NEXT_PUBLIC_APP_NAME`          | 앱 이름             | `BeMore`                    |
+| `NEXT_PUBLIC_APP_VERSION`       | 앱 버전             | `0.1.0`                     |
 
 ---
 
-## 🤝 Contributing
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feature/YourFeature`)
-3. Commit your changes (`git commit -m 'Add YourFeature'`)
-4. Push to your branch (`git push origin feature/YourFeature`)
-5. Open a Pull Request
+## 🧬 Ultrathink Engineering 철학
+- 첫 원리 기반 설계: "왜 이 방식인가?"를 항상 질문
+- 도메인 분리: 모듈별 명확한 책임
+- 성능 최적화: 메모이제이션, 선택적 상태 구독
+- 확장성: 레포지토리 패턴, 모듈형 아키텍처
+
+자세한 내용은 [ARCHITECTURE.md](./ARCHITECTURE.md) 참고
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+## 🤝 기여 방법
+1. 저장소 Fork
+2. 브랜치 생성 (`git checkout -b feature/기능명`)
+3. 커밋 (`git commit -m '기능 추가'`)
+4. 브랜치 Push (`git push origin feature/기능명`)
+5. Pull Request 생성
 
 ---
 
-## 📬 Contact
-- **Repository**: [github.com/BeMore-CapstoneDesign/bemoreFrontend](https://github.com/BeMore-CapstoneDesign/bemoreFrontend)
-- **Issues**: [github.com/BeMore-CapstoneDesign/bemoreFrontend/issues](https://github.com/BeMore-CapstoneDesign/bemoreFrontend/issues)
+## 📄 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 참고
+
+---
+
+## 📬 연락처
+- **저장소**: [github.com/BeMore-CapstoneDesign/bemoreFrontend](https://github.com/BeMore-CapstoneDesign/bemoreFrontend)
+- **이슈**: [github.com/BeMore-CapstoneDesign/bemoreFrontend/issues](https://github.com/BeMore-CapstoneDesign/bemoreFrontend/issues)
 
 ---
 
 <div align="center">
-Made with ❤️ by the BeMore Team
+BeMore Team이 ❤️와 함께 만듦
 </div>
