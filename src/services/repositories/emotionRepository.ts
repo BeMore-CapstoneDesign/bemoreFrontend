@@ -34,7 +34,7 @@ export class EmotionRepositoryImpl implements EmotionRepository {
     }
   }
 
-  async getSessionHistory(sessionId: string): Promise<EmotionAnalysis[]> {
+  async getSessionHistory(_sessionId: string): Promise<EmotionAnalysis[]> {
     try {
       // TODO: 세션별 히스토리 API 구현
       return await apiService.getHistory('user_1', 100);

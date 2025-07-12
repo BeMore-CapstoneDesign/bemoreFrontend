@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Layout } from '../../components/layout/Layout';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -37,15 +37,7 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmotion, setSelectedEmotion] = useState<string>('all');
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
-  useEffect(() => {
-    filterHistory();
-  }, [history, selectedPeriod, searchTerm, selectedEmotion]);
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     if (!user.user?.id) return;
     
     ui.setLoading(true);
@@ -57,9 +49,13 @@ export default function HistoryPage() {
     } finally {
       ui.setLoading(false);
     }
-  };
+  }, [user.user?.id, ui]);
 
-  const filterHistory = () => {
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  const filterHistory = useCallback(() => {
     let filtered = [...history];
 
     // 기간 필터
@@ -86,7 +82,11 @@ export default function HistoryPage() {
     }
 
     setFilteredHistory(filtered);
-  };
+  }, [history, selectedPeriod, selectedEmotion, searchTerm]);
+
+  useEffect(() => {
+    filterHistory();
+  }, [filterHistory]);
 
   const downloadReport = async () => {
     if (!user.user?.id) return;
@@ -152,7 +152,7 @@ export default function HistoryPage() {
                 </label>
                 <select
                   value={selectedPeriod}
-                  onChange={(e) => setSelectedPeriod(e.target.value as any)}
+                  onChange={(e) => setSelectedPeriod(e.target.value as 'week' | 'month' | 'all')}
                   className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 >
                   <option value="week">최근 1주일</option>

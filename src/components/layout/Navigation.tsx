@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { usePathname } from 'next/navigation';
 import { cn } from '../../utils/cn';
 import { 
   Home, 
@@ -21,7 +21,7 @@ const navigationItems = [
 ];
 
 export const Navigation: React.FC = () => {
-  const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAppStore();
 
   return (
@@ -41,7 +41,7 @@ export const Navigation: React.FC = () => {
           {/* 메인 네비게이션 */}
           <div className="hidden md:flex items-center space-x-8">
             {navigationItems.map((item) => {
-              const isActive = router.pathname === item.href;
+              const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.name}
@@ -90,7 +90,7 @@ export const Navigation: React.FC = () => {
       <div className="md:hidden">
         <div className="px-2 pt-2 pb-3 space-y-1">
           {navigationItems.map((item) => {
-            const isActive = router.pathname === item.href;
+            const isActive = pathname === item.href;
             return (
               <Link
                 key={item.name}

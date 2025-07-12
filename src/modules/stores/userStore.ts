@@ -36,7 +36,7 @@ export const useUserStore = create<UserState>()(
         setLoading: (loading) => set({ isLoading: loading }),
         setError: (error) => set({ error }),
         
-        login: async (email, password) => {
+        login: async (email, _password) => {
           set({ isLoading: true, error: null });
           try {
             // TODO: API 호출

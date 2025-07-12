@@ -6,7 +6,7 @@ export interface ChatContext {
   sessionHistory?: ChatMessage[];
   userProfile?: {
     name: string;
-    preferences: any;
+    preferences: unknown;
   };
 }
 
@@ -28,7 +28,7 @@ export class ChatRepositoryImpl implements ChatRepository {
     }
   }
 
-  async getHistory(userId: string, limit: number = 50): Promise<ChatMessage[]> {
+  async getHistory(userId: string, _limit: number = 50): Promise<ChatMessage[]> {
     try {
       // TODO: 채팅 히스토리 API 구현
       return [];
@@ -38,7 +38,7 @@ export class ChatRepositoryImpl implements ChatRepository {
     }
   }
 
-  async getSessionHistory(sessionId: string): Promise<ChatMessage[]> {
+  async getSessionHistory(_sessionId: string): Promise<ChatMessage[]> {
     try {
       // TODO: 세션별 채팅 히스토리 API 구현
       return [];

@@ -10,7 +10,6 @@ import {
   Bell, 
   Database, 
   Palette,
-  Globe,
   Save,
   LogOut,
   Trash2,
@@ -398,7 +397,7 @@ export default function SettingsPage() {
               ].map((themeOption) => (
                 <button
                   key={themeOption.value}
-                  onClick={() => setTheme(themeOption.value as any)}
+                  onClick={() => setTheme(themeOption.value as 'light' | 'dark' | 'auto')}
                   className={`p-4 border rounded-lg text-center transition-colors ${
                     theme === themeOption.value
                       ? 'border-indigo-500 bg-indigo-50'
@@ -460,7 +459,7 @@ export default function SettingsPage() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'account' | 'security' | 'notifications' | 'data' | 'appearance')}
                 className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
                     ? 'border-indigo-500 text-indigo-600'

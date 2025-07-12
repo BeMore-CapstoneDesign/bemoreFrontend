@@ -103,8 +103,8 @@ class ApiService {
   }
 
   // 사용자 프로필 조회
-  async getUserProfile(): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.get('/user/profile');
+  async getUserProfile(): Promise<unknown> {
+    const response: AxiosResponse<ApiResponse<unknown>> = await this.api.get('/user/profile');
     
     if (!response.data.success) {
       throw new Error(response.data.error || '프로필 조회에 실패했습니다.');
