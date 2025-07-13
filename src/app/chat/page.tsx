@@ -119,166 +119,139 @@ export default function ChatPage() {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        {/* 헤더 */}
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">AI 채팅 상담</h1>
-          <p className="text-xl text-gray-600">
-            Gemini와 대화하며 감정을 탐색하고 CBT 피드백을 받아보세요
-          </p>
+      <div className="w-full">
+        <div className="max-w-2xl mx-auto">
+          <Card className="relative flex flex-col w-full min-h-[500px] shadow-xl rounded-2xl bg-white border border-gray-100">
+            {/* 메시지 영역 */}
+            <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50 rounded-t-2xl space-y-4">
+              {messages.map((message, i) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}
+                >
+                  <div
+                    className={`max-w-[80%] px-4 py-3 rounded-2xl shadow-md mb-2 whitespace-pre-wrap break-words text-base leading-relaxed transition-all
+                      ${message.role === 'user'
+                        ? 'bg-violet-600 text-white rounded-br-md ml-8'
+                        : 'bg-white border border-gray-200 rounded-bl-md mr-8'}
+                    `}
+                  >
+                    <div className="flex items-center space-x-2 mb-1">
+                      {message.role === 'user' ? (
+                        <UserIcon className="w-4 h-4" />
+                      ) : (
+                        <Bot className="w-4 h-4 text-violet-600" />
+                      )}
+                      <span className="text-xs opacity-60">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <div>{message.content}</div>
+                  </div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl shadow-md">
+                    <div className="flex items-center space-x-2">
+                      <Bot className="w-4 h-4 text-violet-600" />
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            {/* 입력 & 빠른 제안 영역 - 카드 하단 완전 분리, 그림자+bg+border */}
+            <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 shadow-lg rounded-b-2xl px-4 py-3 z-20">
+              <div className="flex items-end gap-2 mb-3">
+                <textarea
+                  ref={inputRef}
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="메시지를 입력하세요..."
+                  className="flex-1 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-base min-h-[44px] max-h-[120px] bg-gray-50"
+                  rows={2}
+                  disabled={ui.isLoading}
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim() || ui.isLoading}
+                  className="px-5 py-3 rounded-lg text-base font-semibold shadow-md"
+                >
+                  <Send className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="px-4 py-2 text-sm bg-gray-100 hover:bg-violet-100 text-gray-700 rounded-full border border-gray-200 shadow-sm transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
         </div>
-
-        {/* 채팅 인터페이스 */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* 채팅 영역 */}
-          <div className="lg:col-span-3">
-            <Card className="h-[600px] flex flex-col">
+        {/* 사이드바는 아래에만 표시 */}
+        <div className="block w-full max-w-2xl mx-auto mt-6 space-y-6">
+          {/* 현재 감정 상태 */}
+          {session.currentSession && session.currentSession.emotionHistory.length > 0 && (
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Bot className="w-5 h-5 text-violet-600" />
-                  <span>AI 상담사와 대화</span>
+                  <Sparkles className="w-5 h-5 text-indigo-600" />
+                  <span>현재 감정</span>
                 </CardTitle>
               </CardHeader>
-              
-              <CardContent className="flex-1 flex flex-col">
-                {/* 메시지 영역 */}
-                <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[70%] p-3 rounded-lg ${
-                          message.role === 'user'
-                            ? 'bg-violet-600 text-white'
-                            : 'bg-white border border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2 mb-2">
-                          {message.role === 'user' ? (
-                            <UserIcon className="w-4 h-4" />
-                          ) : (
-                            <Bot className="w-4 h-4 text-violet-600" />
-                          )}
-                          <span className="text-xs opacity-70">
-                            {new Date(message.timestamp).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <div className="whitespace-pre-wrap">{message.content}</div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {isTyping && (
-                    <div className="flex justify-start">
-                      <div className="bg-white border border-gray-200 p-3 rounded-lg">
-                        <div className="flex items-center space-x-2">
-                          <Bot className="w-4 h-4 text-violet-600" />
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* 입력 영역 */}
-                <div className="space-y-3">
-                  <div className="flex space-x-2">
-                    <textarea
-                      ref={inputRef}
-                      value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="메시지를 입력하세요..."
-                      className="flex-1 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                      rows={3}
-                      disabled={ui.isLoading}
-                    />
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={!inputMessage.trim() || ui.isLoading}
-                      className="self-end"
-                    >
-                      <Send className="w-4 h-4" />
-                    </Button>
+              <CardContent>
+                <div className="text-center">
+                  <div className="text-4xl mb-2">
+                    {emotionEmojis[ui.currentEmotion as keyof typeof emotionEmojis] || '😐'}
                   </div>
-                  
-                  {/* 빠른 제안 */}
-                  <div className="flex flex-wrap gap-2">
-                    {suggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleSuggestionClick(suggestion)}
-                        className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
+                  <div className="text-lg font-semibold text-gray-900 capitalize">
+                    {ui.currentEmotion}
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
+          )}
 
-          {/* 사이드바 */}
-          <div className="space-y-6">
-            {/* 현재 감정 상태 */}
-            {session.currentSession && session.currentSession.emotionHistory.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Sparkles className="w-5 h-5 text-indigo-600" />
-                    <span>현재 감정</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-4xl mb-2">
-                      {emotionEmojis[ui.currentEmotion as keyof typeof emotionEmojis] || '😐'}
-                    </div>
-                    <div className="text-lg font-semibold text-gray-900 capitalize">
-                      {ui.currentEmotion}
-                    </div>
+          {/* 세션 정보 */}
+          {session.currentSession && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Clock className="w-5 h-5 text-indigo-600" />
+                  <span>세션 정보</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">시작 시간:</span>
+                    <span>{session.currentSession.startTime?.toLocaleTimeString()}</span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* 세션 정보 */}
-            {session.currentSession && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Clock className="w-5 h-5 text-indigo-600" />
-                    <span>세션 정보</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">시작 시간:</span>
-                      <span>{session.currentSession.startTime?.toLocaleTimeString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">분석 횟수:</span>
-                      <span>{session.currentSession.emotionHistory.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">대화 수:</span>
-                      <span>{session.currentSession.chatHistory.length}</span>
-                    </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">분석 횟수:</span>
+                    <span>{session.currentSession.emotionHistory.length}</span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">대화 수:</span>
+                    <span>{session.currentSession.chatHistory.length}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </Layout>
