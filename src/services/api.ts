@@ -10,14 +10,18 @@ class ApiService {
     this.isMockMode = process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_API_URL;
     
     if (this.isMockMode) {
-      console.log('🔧 Mock API mode is active - using Gemini API for chat responses');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 Mock API mode is active - using Gemini API for chat responses');
+      }
       
       // API 키 테스트
       geminiService.testAPIKey().then(isValid => {
-        if (isValid) {
-          console.log('✅ Gemini API 키가 유효합니다');
-        } else {
-          console.log('❌ Gemini API 키가 유효하지 않습니다. 폴백 응답을 사용합니다.');
+        if (process.env.NODE_ENV === 'development') {
+          if (isValid) {
+            console.log('✅ Gemini API 키가 유효합니다');
+          } else {
+            console.log('❌ Gemini API 키가 유효하지 않습니다. 폴백 응답을 사용합니다.');
+          }
         }
       });
     }
@@ -151,7 +155,9 @@ class ApiService {
         
         return this.createMockResponse(chatMessage, 1000).then(response => response.data.data!);
       } catch (error) {
-        console.error('Gemini API 호출 실패, 기본 Mock 응답 사용:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Gemini API 호출 실패, 기본 Mock 응답 사용:', error);
+        }
         
         const fallbackResponses = [
           '네, 말씀해주세요. 어떤 감정을 느끼고 계신지 더 자세히 들려주세요.',
