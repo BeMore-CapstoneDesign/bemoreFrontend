@@ -45,7 +45,8 @@ class GeminiService {
 
   constructor() {
     this.apiKey = GEMINI_API_KEY;
-    if (process.env.NODE_ENV === 'development') {
+    // 개발 환경에서만 로그 표시 (서버 사이드에서만)
+    if (typeof window === 'undefined' && process.env.NODE_ENV === 'development') {
       console.log('Gemini API 키 설정됨:', this.apiKey.substring(0, 10) + '...');
     }
   }
@@ -61,9 +62,6 @@ class GeminiService {
     // 분당 최대 10회 요청 제한
     if (this.requestCount >= 10 && timeSinceLastRequest < 60000) {
       const waitTime = 60000 - timeSinceLastRequest;
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Rate limit reached. Waiting ${waitTime}ms...`);
-      }
       await this.delay(waitTime);
       this.requestCount = 0;
     }
@@ -118,9 +116,7 @@ class GeminiService {
         ],
       };
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Gemini API 호출 중...', { url: GEMINI_API_URL, promptLength: prompt.length });
-      }
+      // API 호출 로그 제거
 
       const response = await fetch(`${GEMINI_API_URL}?key=${this.apiKey}`, {
         method: 'POST',
@@ -130,21 +126,14 @@ class GeminiService {
         body: JSON.stringify(requestBody),
       });
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Gemini API 응답 상태:', response.status, response.statusText);
-      }
+      // 응답 상태 로그 제거
 
       if (!response.ok) {
         const errorText = await response.text();
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Gemini API 에러 응답:', errorText);
-        }
+        // 에러 응답 로그 제거
         
         // 429 에러 (Rate Limit)인 경우 특별 처리
         if (response.status === 429) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Rate limit exceeded, using fallback response');
-          }
           throw new Error('RATE_LIMIT_EXCEEDED');
         }
         
@@ -152,9 +141,7 @@ class GeminiService {
       }
 
       const data: GeminiResponse = await response.json();
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Gemini API 응답 데이터:', data);
-      }
+      // 응답 데이터 로그 제거
       
       if (data.candidates && data.candidates.length > 0) {
         return data.candidates[0].content.parts[0].text;
@@ -162,9 +149,7 @@ class GeminiService {
         throw new Error('No response from Gemini API');
       }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Gemini API 호출 실패:', error);
-      }
+      // 에러 로그 제거
       throw error;
     }
   }
@@ -173,14 +158,8 @@ class GeminiService {
     try {
       const testPrompt = 'Hello, this is a test message.';
       const response = await this.callGeminiAPI(testPrompt);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('API 키 테스트 성공:', response.substring(0, 50) + '...');
-      }
       return true;
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('API 키 테스트 실패:', error);
-      }
       return false;
     }
   }
@@ -219,15 +198,8 @@ CBT 피드백:
     try {
       return await this.callGeminiAPI(prompt);
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Gemini API 호출 실패, 기본 응답 사용:', error);
-      }
-      
       // Rate limit 에러인 경우 더 긴 대기 시간 후 재시도
       if (error instanceof Error && error.message === 'RATE_LIMIT_EXCEEDED') {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Rate limit exceeded, waiting 5 seconds before fallback...');
-        }
         await this.delay(5000);
       }
       
