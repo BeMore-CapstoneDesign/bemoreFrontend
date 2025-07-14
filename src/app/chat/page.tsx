@@ -39,17 +39,17 @@ export default function ChatPage() {
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
         role: 'assistant',
-        content: `안녕하세요! 저는 BeMore의 AI 상담사입니다. 🤖
+        content: `안녕하세요! 저는 BeMore의 AI 상담사입니다. 🌟
 
-오늘 어떤 감정을 느끼고 계신가요? 편하게 이야기해주세요. 
+오늘 하루는 어떠셨나요? 어떤 감정을 느끼고 계신지 편하게 이야기해주세요.
 
-저는 다음과 같은 도움을 드릴 수 있습니다:
-• 감정 상태에 대한 이해와 공감
-• CBT 기반 인지 재구성 도움
-• 스트레스 관리 방법 제안
-• 긍정적 사고 전환 가이드
+저는 여러분의 감정을 이해하고 함께 탐색해드릴 수 있어요:
+• 현재 감정 상태에 대한 공감과 이해
+• CBT 기법을 통한 건강한 사고 패턴 전환
+• 일상에서 실천할 수 있는 스트레스 관리법
+• 긍정적이고 균형잡힌 관점으로의 변화
 
-무엇이든 편하게 말씀해주세요!`,
+무엇이든 편하게 말씀해주세요. 여러분의 이야기를 듣고 있어요! 💙`,
         timestamp: new Date(),
       };
       setMessages([welcomeMessage]);
