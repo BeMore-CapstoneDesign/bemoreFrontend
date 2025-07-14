@@ -195,6 +195,7 @@ export default function ChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [analysisReport, setAnalysisReport] = useState<AnalysisReport | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -306,9 +307,8 @@ export default function ChatPage() {
       alert('대화 내용이 없습니다. 먼저 대화를 나눠보세요.');
       return;
     }
-
+    setReportLoading(true);
     ui.setLoading(true);
-    
     try {
       const report = await generateAnalysisReport();
       setAnalysisReport(report);
@@ -318,6 +318,7 @@ export default function ChatPage() {
       console.error('리포트 생성 실패:', error);
       alert('리포트 생성 중 오류가 발생했습니다.');
     } finally {
+      setReportLoading(false);
       ui.setLoading(false);
     }
   };
@@ -421,7 +422,10 @@ export default function ChatPage() {
                   <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl shadow-md">
                     <div className="flex items-center space-x-2">
                       <Bot className="w-4 h-4 text-violet-600" />
-                      <div className="flex space-x-1">
+                      <span className="text-sm text-gray-500">
+                        AI 상담사가 답변을 준비하고 있어요…
+                      </span>
+                      <div className="flex space-x-1 ml-2">
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
@@ -534,6 +538,17 @@ export default function ChatPage() {
         onClose={() => setShowReportModal(false)}
         report={analysisReport}
       />
+      {/* 분석 리포트 로딩 UI */}
+      {reportLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 flex flex-col items-center shadow-xl">
+            <span className="text-lg font-semibold text-gray-800 mb-4">
+              분석 리포트를 준비하고 있어요…
+            </span>
+            <div className="w-10 h-10 border-4 border-violet-400 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 } 

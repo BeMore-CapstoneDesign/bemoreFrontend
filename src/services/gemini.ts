@@ -53,23 +53,21 @@ class GeminiService {
   }
 
   private async checkRateLimit(): Promise<void> {
-    const now = Date.now();
-    const timeSinceLastRequest = now - this.lastRequestTime;
-    
-    // 분당 최대 2회 요청 제한 (할당량 절약)
-    if (this.requestCount >= 2 && timeSinceLastRequest < 60000) {
-      const waitTime = 60000 - timeSinceLastRequest;
-      await this.delay(waitTime);
-      this.requestCount = 0;
-    }
-    
-    // 요청 간 최소 5초 간격 (할당량 절약)
-    if (timeSinceLastRequest < 5000) {
-      await this.delay(5000 - timeSinceLastRequest);
-    }
-    
-    this.lastRequestTime = Date.now();
-    this.requestCount++;
+    // 개발/테스트 환경에서는 Rate Limit 강제 대기 비활성화
+    return;
+    // 아래 코드는 실제 서비스에서만 사용
+    // const now = Date.now();
+    // const timeSinceLastRequest = now - this.lastRequestTime;
+    // if (this.requestCount >= 2 && timeSinceLastRequest < 60000) {
+    //   const waitTime = 60000 - timeSinceLastRequest;
+    //   await this.delay(waitTime);
+    //   this.requestCount = 0;
+    // }
+    // if (timeSinceLastRequest < 5000) {
+    //   await this.delay(5000 - timeSinceLastRequest);
+    // }
+    // this.lastRequestTime = Date.now();
+    // this.requestCount++;
   }
 
   private async callGeminiAPI(prompt: string): Promise<string> {

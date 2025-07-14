@@ -1,131 +1,156 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { AnalysisReport } from '../types';
+import notoSansKR from '../assets/fonts/NotoSansKR-VariableFont-normal.js';
 
 export class PDFService {
   static async generateReportPDF(report: AnalysisReport, sessionInfo: any): Promise<void> {
     const pdf = new jsPDF('p', 'mm', 'a4');
+    pdf.addFileToVFS('NotoSansKR-VariableFont.ttf', notoSansKR);
+    pdf.addFont('NotoSansKR-VariableFont.ttf', 'NotoSansKR', 'normal');
+    pdf.setFont('NotoSansKR', 'normal');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 20;
     const contentWidth = pageWidth - 2 * margin;
-    
     let yPosition = margin;
-    
+
+    // 스타일 변수
+    const cardPaddingY = 12;
+    const cardPaddingX = 12;
+    const lineHeight = 7.5;
+    const sectionTitleGap = 8;
+    const listGap = 4.5;
+    const cardRadius = 10;
+    const cardFontSize = 12;
+    const cardTitleFontSize = 14;
+    const cardSpacing = 14;
+    const cardPurple: [number, number, number] = [243, 240, 255]; // 연보라
+    const cardBlue: [number, number, number] = [232, 240, 255]; // 연파랑
+
+    // 카드 높이 동적 계산 함수 (splitTextToSize로 실제 줄 수 계산)
+    const getCardHeight = (list: string[]) => {
+      let totalLines = 0;
+      list.forEach(item => {
+        const lines = pdf.splitTextToSize(`• ${item}`, contentWidth - cardPaddingX * 2 - 4);
+        totalLines += lines.length;
+      });
+      return cardPaddingY * 2 + sectionTitleGap + totalLines * lineHeight + (list.length - 1) * listGap;
+    };
+
+    // 카드 그리기 함수
+    const drawCard = (y: number, h: number, color: [number, number, number]) => {
+      pdf.setFillColor(...color);
+      pdf.roundedRect(margin, y, contentWidth, h, cardRadius, cardRadius, 'F');
+    };
+
     // 제목
-    pdf.setFontSize(24);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(75, 85, 99); // gray-600
+    pdf.setFontSize(26);
+    pdf.setFont('NotoSansKR', 'normal');
+    pdf.setTextColor(124, 58, 237); // 보라
     pdf.text('BeMore 대화 분석 리포트', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 15;
-    
-    // 생성 날짜
+    yPosition += 18;
+
+    // 생성일
     pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(107, 114, 128); // gray-500
+    pdf.setTextColor(120, 120, 120);
     pdf.text(`생성일: ${new Date().toLocaleDateString('ko-KR')}`, pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 20;
-    
-    // 세션 요약
-    yPosition = this.addSection(pdf, '세션 요약', yPosition, pageWidth, margin);
-    
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(55, 65, 81); // gray-700
-    
-    // 대화 시간
-    const durationMinutes = Math.floor(report.sessionDuration / 60);
-    const durationSeconds = Math.floor(report.sessionDuration % 60);
-    pdf.text(`• 대화 시간: ${durationMinutes}분 ${durationSeconds}초`, margin, yPosition);
-    yPosition += 8;
-    
-    // 총 메시지 수
-    pdf.text(`• 총 메시지: ${report.totalMessages}개`, margin, yPosition);
-    yPosition += 8;
-    
-    // 감정 변화
-    pdf.text(`• 감정 변화: ${report.emotionTrend}`, margin, yPosition);
-    yPosition += 15;
-    
-    // 주요 인사이트
-    yPosition = this.addSection(pdf, '주요 인사이트', yPosition, pageWidth, margin);
-    
-    report.keyInsights.forEach((insight: string, index: number) => {
-      if (yPosition > pageHeight - 40) {
-        pdf.addPage();
-        yPosition = margin;
-      }
-      pdf.text(`• ${insight}`, margin, yPosition);
-      yPosition += 8;
+    yPosition += 12;
+
+    // 세션 요약 카드
+    const sessionList = [
+      `대화 시간: ${Math.floor(report.sessionDuration / 60)}분 ${Math.floor(report.sessionDuration % 60)}초`,
+      `총 메시지: ${report.totalMessages}개`,
+      `감정 변화: ${report.emotionTrend}`
+    ];
+    const sessionCardHeight = getCardHeight(sessionList);
+    drawCard(yPosition, sessionCardHeight, cardPurple);
+    pdf.setFontSize(cardTitleFontSize);
+    pdf.setTextColor(124, 58, 237);
+    pdf.text('세션 요약', margin + cardPaddingX, yPosition + cardPaddingY);
+    pdf.setFontSize(cardFontSize);
+    pdf.setTextColor(55, 65, 81);
+    let sessionLineY = yPosition + cardPaddingY + sectionTitleGap + lineHeight;
+    sessionList.forEach((item, i) => {
+      const lines = pdf.splitTextToSize(`• ${item}`, contentWidth - cardPaddingX * 2 - 4);
+      lines.forEach((line: string, j: number) => {
+        pdf.text(line, margin + cardPaddingX + 2, sessionLineY);
+        sessionLineY += lineHeight;
+      });
+      if (i < sessionList.length - 1) sessionLineY += listGap;
     });
-    yPosition += 10;
-    
-    // 권장사항
-    yPosition = this.addSection(pdf, '권장사항', yPosition, pageWidth, margin);
-    
-    report.recommendations.forEach((rec: string, index: number) => {
-      if (yPosition > pageHeight - 40) {
-        pdf.addPage();
-        yPosition = margin;
-      }
-      pdf.text(`• ${rec}`, margin, yPosition);
-      yPosition += 8;
+    yPosition += sessionCardHeight + cardSpacing;
+
+    // 주요 인사이트 카드
+    const insights = report.keyInsights;
+    const insightCardHeight = getCardHeight(insights);
+    drawCard(yPosition, insightCardHeight, cardBlue);
+    pdf.setFontSize(cardTitleFontSize);
+    pdf.setTextColor(99, 102, 241);
+    pdf.text('주요 인사이트', margin + cardPaddingX, yPosition + cardPaddingY);
+    pdf.setFontSize(cardFontSize);
+    pdf.setTextColor(55, 65, 81);
+    let insightLineY = yPosition + cardPaddingY + sectionTitleGap + lineHeight;
+    insights.forEach((insight, i) => {
+      const lines = pdf.splitTextToSize(`• ${insight}`, contentWidth - cardPaddingX * 2 - 4);
+      lines.forEach((line: string, j: number) => {
+        pdf.text(line, margin + cardPaddingX + 2, insightLineY);
+        insightLineY += lineHeight;
+      });
+      if (i < insights.length - 1) insightLineY += listGap;
     });
-    yPosition += 10;
-    
-    // CBT 기법
-    yPosition = this.addSection(pdf, '추천 CBT 기법', yPosition, pageWidth, margin);
-    
-    report.cbtTechniques.forEach((technique: string, index: number) => {
-      if (yPosition > pageHeight - 40) {
-        pdf.addPage();
-        yPosition = margin;
-      }
-      pdf.text(`• ${technique}`, margin, yPosition);
-      yPosition += 8;
+    yPosition += insightCardHeight + cardSpacing;
+
+    // 권장사항 카드
+    const recs = report.recommendations;
+    const recCardHeight = getCardHeight(recs);
+    drawCard(yPosition, recCardHeight, cardPurple);
+    pdf.setFontSize(cardTitleFontSize);
+    pdf.setTextColor(124, 58, 237);
+    pdf.text('권장사항', margin + cardPaddingX, yPosition + cardPaddingY);
+    pdf.setFontSize(cardFontSize);
+    pdf.setTextColor(55, 65, 81);
+    let recLineY = yPosition + cardPaddingY + sectionTitleGap + lineHeight;
+    recs.forEach((rec, i) => {
+      const lines = pdf.splitTextToSize(`• ${rec}`, contentWidth - cardPaddingX * 2 - 4);
+      lines.forEach((line: string, j: number) => {
+        pdf.text(line, margin + cardPaddingX + 2, recLineY);
+        recLineY += lineHeight;
+      });
+      if (i < recs.length - 1) recLineY += listGap;
     });
-    yPosition += 15;
-    
-    // 하단 정보
-    if (yPosition > pageHeight - 30) {
-      pdf.addPage();
-      yPosition = margin;
-    }
-    
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'italic');
-    pdf.setTextColor(107, 114, 128); // gray-500
-    pdf.text('이 리포트는 AI 기반 감정 분석과 CBT 전문가의 관점에서 생성되었습니다.', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 8;
-    pdf.text('BeMore - AI 기반 감정 분석 및 CBT 상담 서비스', pageWidth / 2, yPosition, { align: 'center' });
-    
+    yPosition += recCardHeight + cardSpacing;
+
+    // 추천 CBT 기법 카드
+    const cbts = report.cbtTechniques;
+    const cbtCardHeight = getCardHeight(cbts);
+    drawCard(yPosition, cbtCardHeight, cardBlue);
+    pdf.setFontSize(cardTitleFontSize);
+    pdf.setTextColor(99, 102, 241);
+    pdf.text('추천 CBT 기법', margin + cardPaddingX, yPosition + cardPaddingY);
+    pdf.setFontSize(cardFontSize);
+    pdf.setTextColor(55, 65, 81);
+    let cbtLineY = yPosition + cardPaddingY + sectionTitleGap + lineHeight;
+    cbts.forEach((cbt, i) => {
+      const lines = pdf.splitTextToSize(`• ${cbt}`, contentWidth - cardPaddingX * 2 - 4);
+      lines.forEach((line: string, j: number) => {
+        pdf.text(line, margin + cardPaddingX + 2, cbtLineY);
+        cbtLineY += lineHeight;
+      });
+      if (i < cbts.length - 1) cbtLineY += listGap;
+    });
+    yPosition += cbtCardHeight + cardSpacing;
+
+    // 하단 따뜻한 메시지
+    pdf.setFontSize(11);
+    pdf.setTextColor(124, 58, 237);
+    pdf.text('BeMore는 여러분의 마음을 항상 응원합니다 💜', pageWidth / 2, pageHeight - 16, { align: 'center' });
+
     // PDF 저장
     const fileName = `BeMore_리포트_${new Date().toISOString().split('T')[0]}.pdf`;
     pdf.save(fileName);
   }
-  
-  private static addSection(pdf: jsPDF, title: string, yPosition: number, pageWidth: number, margin: number): number {
-    // 페이지 넘침 체크
-    if (yPosition > pdf.internal.pageSize.getHeight() - 40) {
-      pdf.addPage();
-      yPosition = margin;
-    }
-    
-    // 섹션 제목
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(59, 130, 246); // blue-500
-    pdf.text(title, margin, yPosition);
-    yPosition += 8;
-    
-    // 구분선
-    pdf.setDrawColor(229, 231, 235); // gray-200
-    pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 12;
-    
-    return yPosition;
-  }
-  
+
   // HTML 요소를 PDF로 변환 (모달 내용을 PDF로)
   static async generateModalPDF(modalElement: HTMLElement): Promise<void> {
     try {
