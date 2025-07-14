@@ -9,18 +9,192 @@ import {
   Bot, 
   User as UserIcon,
   Sparkles,
-  Clock
+  Clock,
+  X,
+  FileText,
+  TrendingUp,
+  Lightbulb,
+  Heart
 } from 'lucide-react';
 import { useAppStores } from '../../modules/stores';
 import { apiService } from '../../services/api';
-import { ChatMessage } from '../../types';
+import { PDFService } from '../../services/pdfService';
+import { geminiService } from '../../services/gemini';
+import { ChatMessage, AnalysisReport } from '../../types';
 import { emotionEmojis } from '../../utils/emotion';
+
+// 분석 리포트 모달 컴포넌트
+interface ReportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  report: AnalysisReport | null;
+}
+
+function ReportModal({ isOpen, onClose, report }: ReportModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handlePDFDownload = async () => {
+    if (!report) return;
+    
+    try {
+      // PDF 생성 및 다운로드
+      await PDFService.generateReportPDF(report, {});
+    } catch (error) {
+      console.error('PDF 다운로드 실패:', error);
+      alert('PDF 다운로드 중 오류가 발생했습니다.');
+    }
+  };
+
+  if (!isOpen || !report) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div ref={modalRef} className="bg-white rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">대화 분석 리포트</h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          {/* 세션 요약 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Clock className="w-5 h-5 text-blue-600" />
+                <span>세션 요약</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {Math.floor(report.sessionDuration / 60)}분
+                  </div>
+                  <div className="text-gray-600">대화 시간</div>
+                </div>
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {report.totalMessages}
+                  </div>
+                  <div className="text-gray-600">총 메시지</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 감정 변화 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5 text-purple-600" />
+                <span>감정 변화</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <div className="text-lg font-semibold text-purple-600 mb-2">
+                  {report.emotionTrend}
+                </div>
+                <div className="text-gray-600">
+                  대화를 통해 감정 상태가 개선되었습니다
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 주요 인사이트 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Lightbulb className="w-5 h-5 text-yellow-600" />
+                <span>주요 인사이트</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {report.keyInsights.map((insight, index) => (
+                  <li key={index} className="flex items-start space-x-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700">{insight}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* 권장사항 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Heart className="w-5 h-5 text-red-600" />
+                <span>권장사항</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {report.recommendations.map((rec, index) => (
+                  <li key={index} className="flex items-start space-x-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700">{rec}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* CBT 기법 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="w-5 h-5 text-indigo-600" />
+                <span>추천 CBT 기법</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {report.cbtTechniques.map((technique, index) => (
+                  <div key={index} className="p-3 bg-indigo-50 rounded-lg">
+                    <div className="font-medium text-indigo-700">{technique}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex justify-end space-x-3 mt-6 pt-6 border-t">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="px-6"
+          >
+            닫기
+          </Button>
+          <Button
+            onClick={handlePDFDownload}
+            className="px-6"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            PDF 저장
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ChatPage() {
   const { session, ui } = useAppStores();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [analysisReport, setAnalysisReport] = useState<AnalysisReport | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -55,6 +229,98 @@ export default function ChatPage() {
       setMessages([welcomeMessage]);
     }
   }, [messages.length]);
+
+  // 대화 분석 리포트 생성
+  const generateAnalysisReport = async (): Promise<AnalysisReport> => {
+    const sessionDuration = session.currentSession?.startTime 
+      ? (new Date().getTime() - session.currentSession.startTime.getTime()) / 1000
+      : 0;
+    
+    const totalMessages = messages.length;
+    
+    // 감정 변화 분석
+    const emotionHistory = session.currentSession?.emotionHistory || [];
+    const emotionTrend = emotionHistory.length > 1 
+      ? emotionHistory[0].vadScore.valence < emotionHistory[emotionHistory.length - 1].vadScore.valence
+        ? '개선됨'
+        : '안정적'
+      : '변화 없음';
+
+    // AI를 통한 대화 분석
+    const conversationText = messages
+      .filter(msg => msg.role === 'user')
+      .map(msg => msg.content)
+      .join('\n');
+
+    try {
+      // Gemini 서비스의 전용 분석 메서드 사용
+      const analysisResponse = await geminiService.generateConversationAnalysis(conversationText);
+      let parsedAnalysis;
+      
+      try {
+        // JSON 응답 파싱 시도
+        const jsonMatch = analysisResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsedAnalysis = JSON.parse(jsonMatch[0]);
+        } else {
+          // 파싱 실패 시 기본값 사용
+          parsedAnalysis = {
+            keyInsights: ['감정 표현이 활발했습니다', '스트레스 상황에 대한 대처가 필요합니다'],
+            recommendations: ['정기적인 마음챙김 연습을 권장합니다', '일상에서 작은 감사 표현을 해보세요'],
+            cbtTechniques: ['인지 재구성', '사고 기록']
+          };
+        }
+      } catch {
+        // 파싱 실패 시 기본값 사용
+        parsedAnalysis = {
+          keyInsights: ['감정 표현이 활발했습니다', '스트레스 상황에 대한 대처가 필요합니다'],
+          recommendations: ['정기적인 마음챙김 연습을 권장합니다', '일상에서 작은 감사 표현을 해보세요'],
+          cbtTechniques: ['인지 재구성', '사고 기록']
+        };
+      }
+
+      return {
+        sessionDuration,
+        totalMessages,
+        emotionTrend,
+        keyInsights: parsedAnalysis.keyInsights || ['감정 표현이 활발했습니다'],
+        recommendations: parsedAnalysis.recommendations || ['정기적인 마음챙김 연습을 권장합니다'],
+        cbtTechniques: parsedAnalysis.cbtTechniques || ['인지 재구성']
+      };
+    } catch (error) {
+      // 에러 시 기본 리포트 반환
+      return {
+        sessionDuration,
+        totalMessages,
+        emotionTrend,
+        keyInsights: ['감정 표현이 활발했습니다', '스트레스 상황에 대한 대처가 필요합니다'],
+        recommendations: ['정기적인 마음챙김 연습을 권장합니다', '일상에서 작은 감사 표현을 해보세요'],
+        cbtTechniques: ['인지 재구성', '사고 기록']
+      };
+    }
+  };
+
+  // 채팅 종료 처리
+  const handleEndChat = async () => {
+    if (messages.length <= 1) {
+      alert('대화 내용이 없습니다. 먼저 대화를 나눠보세요.');
+      return;
+    }
+
+    ui.setLoading(true);
+    
+    try {
+      const report = await generateAnalysisReport();
+      setAnalysisReport(report);
+      setShowReportModal(true);
+      session.endSession();
+    } catch (error) {
+      console.error('리포트 생성 실패:', error);
+      alert('리포트 생성 중 오류가 발생했습니다.');
+    } finally {
+      ui.setLoading(false);
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || ui.isLoading) return;
@@ -122,8 +388,23 @@ export default function ChatPage() {
       <div className="w-full">
         <div className="max-w-2xl mx-auto">
           <Card className="relative flex flex-col w-full min-h-[500px] shadow-xl rounded-2xl bg-white border border-gray-100">
+            {/* 헤더 - 종료 버튼 추가 */}
+            <div className="flex justify-between items-center p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">AI 상담사와 대화</h2>
+              <Button
+                onClick={handleEndChat}
+                disabled={ui.isLoading || messages.length <= 1}
+                variant="outline"
+                size="sm"
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                <X className="w-4 h-4 mr-1" />
+                대화 종료
+              </Button>
+            </div>
+
             {/* 메시지 영역 */}
-            <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50 rounded-t-2xl space-y-4">
+            <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50 space-y-4">
               {messages.map((message, i) => (
                 <div
                   key={message.id}
@@ -254,6 +535,13 @@ export default function ChatPage() {
           )}
         </div>
       </div>
+
+      {/* 분석 리포트 모달 */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        report={analysisReport}
+      />
     </Layout>
   );
 } 

@@ -43,6 +43,16 @@ export interface UserSession {
   chatHistory: ChatMessage[];
 }
 
+// 분석 리포트 타입
+export interface AnalysisReport {
+  sessionDuration: number;
+  totalMessages: number;
+  emotionTrend: string;
+  keyInsights: string[];
+  recommendations: string[];
+  cbtTechniques: string[];
+}
+
 // 사용자 프로필 타입
 export interface UserProfile {
   id: string;

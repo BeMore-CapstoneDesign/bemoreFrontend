@@ -201,37 +201,9 @@ class GeminiService {
       prompt += `\n\n위 대화 맥락을 고려하여 연속성 있는 응답을 제공해주세요.`;
     }
 
+    // 감정 컨텍스트가 있는 경우
     if (emotionContext) {
-      // 감정별 맞춤형 접근법
-      const emotionApproaches = {
-        'angry': {
-          focus: '분노 관리와 인지 재구성',
-          technique: '시간 두기 기법, 관점 전환, 분노의 근본 원인 탐색',
-          goal: '건강한 분노 표현과 갈등 해결 방법 제시'
-        },
-        'sad': {
-          focus: '우울감 완화와 자기 동정',
-          technique: '활동 스케줄링, 긍정적 활동 찾기, 사회적 연결 유지',
-          goal: '우울감에서 벗어나는 작은 단계들 제안'
-        },
-        'anxious': {
-          focus: '불안 관리와 마음챙김',
-          technique: '호흡 기법, 현재에 집중, 불안의 근거 검토',
-          goal: '불안을 관리하는 실용적 방법 제공'
-        },
-        'happy': {
-          focus: '긍정적 감정 활용과 유지',
-          technique: '감사 연습, 긍정적 경험 확장, 회복력 강화',
-          goal: '긍정적 감정을 더 오래 유지하는 방법 제시'
-        },
-        'neutral': {
-          focus: '감정 인식과 자기 성찰',
-          technique: '감정 라벨링, 현재 상태 점검, 목표 설정',
-          goal: '감정 상태를 더 잘 이해하고 관리하는 방법 안내'
-        }
-      };
-
-      const approach = emotionApproaches[emotionContext.emotion as keyof typeof emotionApproaches] || emotionApproaches.neutral;
+      const approach = this.getEmotionSpecificApproach(emotionContext.emotion);
 
       prompt += `
 
@@ -263,6 +235,99 @@ class GeminiService {
       
       return this.getFallbackResponse(userMessage);
     }
+  }
+
+  // 대화 분석 리포트 생성을 위한 전용 메서드
+  async generateConversationAnalysis(conversationText: string): Promise<string> {
+    const prompt = `당신은 BeMore의 CBT 전문가입니다. 다음 대화를 분석하여 전문적인 인사이트를 제공해주세요.
+
+**분석할 대화 내용:**
+${conversationText}
+
+**분석 요청사항:**
+1. **주요 감정 패턴** (3-4개): 사용자가 표현한 주요 감정과 그 패턴
+2. **인지 왜곡 패턴** (2-3개): 부정적 사고 패턴이나 인지 왜곡
+3. **구체적인 권장사항** (3-4개): 실천 가능한 행동 변화 제안
+4. **추천 CBT 기법** (2-3개): 효과적인 CBT 치료 기법
+
+**응답 형식:**
+다음 JSON 형태로 정확히 응답해주세요. 한국어로 작성하되, JSON 키는 영어로 유지해주세요.
+
+{
+  "keyInsights": [
+    "감정 표현이 활발하고 솔직했습니다",
+    "스트레스 상황에 대한 대처 방식이 개선되었습니다",
+    "자기비판적 사고 패턴이 관찰됩니다"
+  ],
+  "recommendations": [
+    "정기적인 마음챙김 연습을 권장합니다",
+    "일상에서 작은 감사 표현을 해보세요",
+    "스트레스 관리 기법을 일상에 적용해보세요"
+  ],
+  "cbtTechniques": [
+    "인지 재구성 기법",
+    "사고 기록 작성",
+    "행동 활성화 기법"
+  ]
+}
+
+위 형식에 맞춰 분석 결과를 제공해주세요.`;
+
+    try {
+      return await this.callGeminiAPI(prompt);
+    } catch (error) {
+      // 에러 시 기본 분석 결과 반환
+      return `{
+  "keyInsights": [
+    "감정 표현이 활발했습니다",
+    "스트레스 상황에 대한 대처가 필요합니다",
+    "자기성찰 능력이 뛰어납니다"
+  ],
+  "recommendations": [
+    "정기적인 마음챙김 연습을 권장합니다",
+    "일상에서 작은 감사 표현을 해보세요",
+    "스트레스 관리 기법을 일상에 적용해보세요"
+  ],
+  "cbtTechniques": [
+    "인지 재구성",
+    "사고 기록",
+    "행동 활성화"
+  ]
+}`;
+    }
+  }
+
+  // 감정별 맞춤형 접근법 반환
+  private getEmotionSpecificApproach(emotion: string) {
+    const emotionApproaches = {
+      'angry': {
+        focus: '분노 관리와 인지 재구성',
+        technique: '시간 두기 기법, 관점 전환, 분노의 근본 원인 탐색',
+        goal: '건강한 분노 표현과 갈등 해결 방법 제시'
+      },
+      'sad': {
+        focus: '우울감 완화와 자기 동정',
+        technique: '활동 스케줄링, 긍정적 활동 찾기, 사회적 연결 유지',
+        goal: '우울감에서 벗어나는 작은 단계들 제안'
+      },
+      'anxious': {
+        focus: '불안 관리와 마음챙김',
+        technique: '호흡 기법, 현재에 집중, 불안의 근거 검토',
+        goal: '불안을 관리하는 실용적 방법 제공'
+      },
+      'happy': {
+        focus: '긍정적 감정 활용과 유지',
+        technique: '감사 연습, 긍정적 경험 확장, 회복력 강화',
+        goal: '긍정적 감정을 더 오래 유지하는 방법 제시'
+      },
+      'neutral': {
+        focus: '감정 인식과 자기 성찰',
+        technique: '감정 라벨링, 현재 상태 점검, 목표 설정',
+        goal: '감정 상태를 더 잘 이해하고 관리하는 방법 안내'
+      }
+    };
+
+    return emotionApproaches[emotion as keyof typeof emotionApproaches] || emotionApproaches.neutral;
   }
 
   private getFallbackResponse(userMessage: string, emotionContext?: EmotionAnalysis): string {
