@@ -159,6 +159,8 @@ class GeminiService {
       const response = await this.callGeminiAPI(testPrompt);
       return true;
     } catch (error) {
+      // API 키 만료 또는 할당량 초과 시 Mock 모드로 전환
+      console.log('API 키 테스트 실패, Mock 모드로 전환:', error);
       return false;
     }
   }
@@ -197,6 +199,8 @@ CBT 피드백:
     try {
       return await this.callGeminiAPI(prompt);
     } catch (error) {
+      console.log('Gemini API 호출 실패, Mock 응답 사용:', error);
+      
       // Rate limit 에러인 경우 더 긴 대기 시간 후 재시도
       if (error instanceof Error && error.message === 'RATE_LIMIT_EXCEEDED') {
         await this.delay(5000);
