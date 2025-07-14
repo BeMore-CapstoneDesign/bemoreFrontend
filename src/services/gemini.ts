@@ -166,33 +166,90 @@ class GeminiService {
 
   async generateChatResponse(
     userMessage: string, 
-    emotionContext?: EmotionAnalysis
+    emotionContext?: EmotionAnalysis,
+    conversationHistory?: ChatMessage[]
   ): Promise<string> {
-    let prompt = `당신은 BeMore의 AI 상담사입니다. CBT(인지행동치료) 기반으로 사용자와 대화합니다.
+    let prompt = `당신은 BeMore의 전문 AI 상담사입니다. CBT(인지행동치료) 전문가로서 다음과 같은 역할을 수행합니다:
 
-다음 원칙을 따라 응답해주세요:
-1. 공감적이고 따뜻한 톤으로 응답
-2. CBT 기법을 활용한 인지 재구성 도움
-3. 구체적이고 실용적인 조언 제공
-4. 한국어로 자연스럽게 응답
-5. 응답은 2-3문장으로 간결하게
+**핵심 역할:**
+- 감정적 공감과 인지적 도전의 균형 유지
+- 사용자의 부정적 사고 패턴을 건강한 관점으로 전환
+- 실용적이고 구체적인 행동 변화 가이드 제공
+
+**응답 원칙:**
+1. **공감적 접근**: 사용자의 감정을 먼저 인정하고 공감
+2. **인지 재구성**: 부정적 사고를 객관적이고 균형잡힌 관점으로 전환
+3. **구체적 행동**: 즉시 실천 가능한 구체적인 행동 제안
+4. **단계적 접근**: 한 번에 하나씩, 작은 변화부터 시작
+5. **자기효능감 강화**: 사용자의 내적 자원과 강점 강조
+
+**응답 스타일:**
+- 따뜻하고 전문적인 톤
+- 2-3문장으로 간결하고 명확하게
+- 질문을 통한 자기성찰 유도
+- 한국어로 자연스럽게
 
 사용자 메시지: "${userMessage}"`;
 
+    // 대화 히스토리 추가 (최근 3개 메시지)
+    if (conversationHistory && conversationHistory.length > 0) {
+      const recentMessages = conversationHistory.slice(-3);
+      prompt += `\n\n**최근 대화 맥락:**`;
+      recentMessages.forEach(msg => {
+        prompt += `\n${msg.role === 'user' ? '사용자' : '상담사'}: ${msg.content}`;
+      });
+      prompt += `\n\n위 대화 맥락을 고려하여 연속성 있는 응답을 제공해주세요.`;
+    }
+
     if (emotionContext) {
+      // 감정별 맞춤형 접근법
+      const emotionApproaches = {
+        'angry': {
+          focus: '분노 관리와 인지 재구성',
+          technique: '시간 두기 기법, 관점 전환, 분노의 근본 원인 탐색',
+          goal: '건강한 분노 표현과 갈등 해결 방법 제시'
+        },
+        'sad': {
+          focus: '우울감 완화와 자기 동정',
+          technique: '활동 스케줄링, 긍정적 활동 찾기, 사회적 연결 유지',
+          goal: '우울감에서 벗어나는 작은 단계들 제안'
+        },
+        'anxious': {
+          focus: '불안 관리와 마음챙김',
+          technique: '호흡 기법, 현재에 집중, 불안의 근거 검토',
+          goal: '불안을 관리하는 실용적 방법 제공'
+        },
+        'happy': {
+          focus: '긍정적 감정 활용과 유지',
+          technique: '감사 연습, 긍정적 경험 확장, 회복력 강화',
+          goal: '긍정적 감정을 더 오래 유지하는 방법 제시'
+        },
+        'neutral': {
+          focus: '감정 인식과 자기 성찰',
+          technique: '감정 라벨링, 현재 상태 점검, 목표 설정',
+          goal: '감정 상태를 더 잘 이해하고 관리하는 방법 안내'
+        }
+      };
+
+      const approach = emotionApproaches[emotionContext.emotion as keyof typeof emotionApproaches] || emotionApproaches.neutral;
+
       prompt += `
 
-현재 감정 상태:
-- 주요 감정: ${emotionContext.emotion}
-- 신뢰도: ${(emotionContext.confidence * 100).toFixed(1)}%
+**감정 분석 결과:**
+- 주요 감정: ${emotionContext.emotion} (신뢰도: ${(emotionContext.confidence * 100).toFixed(1)}%)
 - VAD 점수: Valence=${emotionContext.vadScore.valence}, Arousal=${emotionContext.vadScore.arousal}, Dominance=${emotionContext.vadScore.dominance}
 
-CBT 피드백:
+**CBT 분석:**
 - 인지 왜곡: ${emotionContext.cbtFeedback.cognitiveDistortion}
 - 도전적 질문: ${emotionContext.cbtFeedback.challenge}
 - 대안적 사고: ${emotionContext.cbtFeedback.alternative}
 
-이 정보를 바탕으로 더 맞춤형 응답을 제공해주세요.`;
+**맞춤형 접근법:**
+- 집중 영역: ${approach.focus}
+- 권장 기법: ${approach.technique}
+- 목표: ${approach.goal}
+
+위 정보를 바탕으로 ${emotionContext.emotion} 감정에 특화된 맞춤형 응답을 제공해주세요.`;
     }
 
     try {
