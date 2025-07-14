@@ -388,23 +388,8 @@ export default function ChatPage() {
       <div className="w-full">
         <div className="max-w-2xl mx-auto">
           <Card className="relative flex flex-col w-full min-h-[500px] shadow-xl rounded-2xl bg-white border border-gray-100">
-            {/* 헤더 - 종료 버튼 추가 */}
-            <div className="flex justify-between items-center p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">AI 상담사와 대화</h2>
-              <Button
-                onClick={handleEndChat}
-                disabled={ui.isLoading || messages.length <= 1}
-                variant="outline"
-                size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50"
-              >
-                <X className="w-4 h-4 mr-1" />
-                대화 종료
-              </Button>
-            </div>
-
             {/* 메시지 영역 */}
-            <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50 space-y-4">
+            <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50 rounded-t-2xl space-y-4">
               {messages.map((message, i) => (
                 <div
                   key={message.id}
@@ -468,7 +453,7 @@ export default function ChatPage() {
                   <Send className="w-5 h-5" />
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {suggestions.map((suggestion, index) => (
                   <button
                     key={index}
@@ -478,6 +463,13 @@ export default function ChatPage() {
                     {suggestion}
                   </button>
                 ))}
+                <button
+                  onClick={handleEndChat}
+                  disabled={ui.isLoading || messages.length <= 1}
+                  className="px-4 py-2 text-sm bg-white hover:bg-red-50 text-red-600 rounded-full border border-red-200 shadow-sm transition-colors font-semibold whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  이제 대화를 종료하고 싶어요
+                </button>
               </div>
             </div>
           </Card>

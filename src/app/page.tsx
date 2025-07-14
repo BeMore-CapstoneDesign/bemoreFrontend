@@ -201,10 +201,10 @@ function HomePage() {
             </div>
           </CardContent>
         </Card>
-              </div>
+    </div>
       </Layout>
-    );
-  }
+  );
+}
 
 // 고차 컴포넌트로 감싸기
 export default withErrorBoundary(withLoading(HomePage));
