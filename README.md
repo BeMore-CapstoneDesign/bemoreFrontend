@@ -1,188 +1,82 @@
-# BeMore - 멀티모달 감정 분석 & CBT 피드백 서비스
+# BeMore - AI 기반 감정 분석 & CBT 피드백 서비스
 
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/BeMore-CapstoneDesign/bemoreFrontend)
-
-> **BeMore**는 AI 기반 멀티모달 감정 분석과 CBT(인지행동치료) 피드백을 제공하는 웹 서비스입니다. 표정, 음성, 텍스트를 통해 감정을 분석하고, 맞춤형 피드백과 시각화 리포트를 제공합니다.
+BeMore는 AI(Gemini) 기반으로 감정 분석, 인지행동치료(CBT) 피드백, 대화 리포트 PDF 생성까지 제공하는 현대적 심리 케어 프론트엔드 서비스입니다.
 
 ---
 
-## 📂 폴더 구조
+## ✨ 주요 기능
 
-```
-bemore-frontend/
-├── public/                   # 정적 자산 (이미지, 아이콘 등)
-├── src/
-│   ├── app/                  # Next.js App Router
-│   │   ├── page.tsx         # 홈 페이지
-│   │   ├── analysis/        # 감정 분석 페이지
-│   │   ├── chat/            # AI 채팅 페이지
-│   │   ├── history/         # 히스토리 페이지
-│   │   └── settings/        # 설정 페이지
-│   ├── components/          # 재사용 UI 컴포넌트
-│   │   ├── ui/              # 기본 UI 컴포넌트
-│   │   ├── layout/          # 레이아웃 컴포넌트
-│   │   └── hoc/             # 고차 컴포넌트
-│   ├── modules/             # 비즈니스 로직
-│   │   └── stores/          # Zustand 상태 관리
-│   ├── services/            # API 서비스 및 레포지토리
-│   ├── hooks/               # 커스텀 React 훅
-│   ├── utils/               # 유틸리티 함수
-│   └── types/               # TypeScript 타입 정의
-├── .env.example             # 환경 변수 예시
-├── package.json             # 프로젝트 설정
-├── README.md                # 프로젝트 문서
-└── ARCHITECTURE.md          # 아키텍처 문서
-```
+- **AI 채팅**
+  - Gemini 기반 AI 상담사
+  - 감정 분석, CBT 피드백, 맞춤형 대화
+  - 최근 대화 맥락/감정 기반 응답
+  - UX: 로딩 메시지(“AI 상담사가 답변을 준비하고 있어요…”), 대화 종료/리포트 등
+
+- **PDF 리포트**
+  - 한글 폰트 내장(jsPDF + NotoSansKR)
+  - BeMore 브랜드 컬러(보라/파랑), 카드형 섹션, 따뜻한 메시지
+  - 자동 줄바꿈, 가독성/여백/정렬 최적화
+  - “BeMore는 여러분의 마음을 항상 응원합니다 💜” 등 브랜드 감성 강조
+
+- **UI/UX**
+  - 대화 종료 버튼(자연스러운 문장형, 감정 제안 버튼과 동일 디자인)
+  - 리포트 생성 중 로딩 UI
+  - 반응형, 접근성, 직관적 인터페이스
 
 ---
 
-## 🚀 주요 기능
+## 🛠️ 개발/운영 가이드
 
-### 📊 감정 분석 (Analysis)
-- 표정 분석: 카메라 촬영 또는 이미지 업로드
-- 음성 분석: 실시간 녹음 또는 오디오 파일 업로드
-- 텍스트 분석: 감정이 담긴 텍스트 입력
-- VAD 시각화: Valence, Arousal, Dominance 차트
-- CBT 피드백: 인지 왜곡 탐지 및 대안 제시
+### 1. 한글 PDF 폰트 적용법
 
-### 💬 AI 채팅 (Chat)
-- Gemini 기반 AI 상담
-- 최근 감정 분석 결과 기반 맞춤 응답
-- 감정별 빠른 제안 문구
-- 실시간 타이핑 인디케이터
+- `src/assets/fonts/`에 NotoSansKR ttf 파일과 base64 변환 JS 파일(`NotoSansKR-VariableFont-normal.js`) 필요
+- 변환 스크립트 예시:
+  ```js
+  // ttf2js.js
+  const fs = require('fs');
+  const ttf = fs.readFileSync('src/assets/fonts/NotoSansKR-VariableFont_wght.ttf');
+  const base64 = ttf.toString('base64');
+  const js = `export default "${base64}";\n`;
+  fs.writeFileSync('src/assets/fonts/NotoSansKR-VariableFont-normal.js', js);
+  ```
+- 타입스크립트 모듈 선언:
+  ```ts
+  // src/assets/fonts/typings.d.ts
+  declare module '*.js' {
+    const value: string;
+    export default value;
+  }
+  ```
 
-### 📈 히스토리 (History)
-- 감정 변화 추적 및 시각화(라인/파이 차트)
-- 기간/감정/검색어별 필터링
-- PDF 리포트 다운로드
+### 2. Gemini API 연동/쿼터 관리
 
-### ⚙️ 설정 (Settings)
-- 프로필 관리
-- 보안(비밀번호, 2FA)
-- 알림 설정
-- 테마(라이트/다크/자동)
+- `.env.local`에 API 키/엔드포인트 설정
+- 무료 쿼터 초과 시 Rate Limit 코드 참고, 유료 플랜 권장
 
----
+### 3. 주요 기술 스택
 
-## 🔗 주요 API 엔드포인트
-
-| 메서드 | 엔드포인트                                 | 설명                 |
-| ------ | ---------------------------------------- | -------------------- |
-| POST   | `/api/emotion/analyze`                   | 멀티모달 감정 분석   |
-| POST   | `/api/chat/gemini`                       | AI 채팅 메시지 전송  |
-| GET    | `/api/history/:userId`                   | 사용자 감정 히스토리 |
-| GET    | `/api/user/profile`                      | 사용자 프로필 조회   |
-| PUT    | `/api/user/profile`                      | 사용자 프로필 수정   |
-| POST   | `/api/history/session/:sessionId/pdf`    | PDF 리포트 생성      |
+- Next.js 15, TypeScript, TailwindCSS, Zustand, jsPDF, html2canvas, Lucide React, Gemini API
 
 ---
 
-## 🛠️ 기술 스택
-
-- **Next.js 15** (React 프레임워크)
-- **TypeScript** (타입 안전성)
-- **TailwindCSS** (유틸리티 CSS)
-- **Zustand** (상태 관리)
-- **Recharts** (데이터 시각화)
-- **Lucide React** (아이콘)
-- **Axios** (API 요청)
-
----
-
-## ⚡ 시작하기
-
-### 필수 요구사항
-- Node.js 18 이상
-- npm 또는 yarn
-- Git
-
-### 설치 및 실행
+## ⚡️ 실행 방법
 
 ```bash
 git clone https://github.com/BeMore-CapstoneDesign/bemoreFrontend.git
 cd bemore-frontend
-npm install # 또는 yarn install
+npm install
 cp .env.example .env.local
-```
-
-### 개발 서버 실행
-
-```bash
-npm run dev # 또는 yarn dev
-```
-
-브라우저에서 [http://localhost:3000](http://localhost:3000) 접속
-
-### 빌드 & 린트
-
-```bash
-npm run build
-npm run start
-npm run lint
+npm run dev
 ```
 
 ---
 
-## ⚙️ 환경 변수
+## 📄 기타
 
-| 변수명                          | 설명                | 기본값                      |
-| ------------------------------- | ------------------- | --------------------------- |
-| `NEXT_PUBLIC_API_URL`           | 백엔드 API URL      | `http://localhost:3001/api` |
-| `NEXT_PUBLIC_GEMINI_API_KEY`    | Google Gemini API 키| -                           |
-| `NEXT_PUBLIC_ANALYSIS_SERVER_URL`| 분석 서버 URL       | -                           |
-| `NEXT_PUBLIC_APP_NAME`          | 앱 이름             | `BeMore`                    |
-| `NEXT_PUBLIC_APP_VERSION`       | 앱 버전             | `0.1.0`                     |
-
-### 🔧 개발 모드 (Mock API + Gemini)
-
-개발 환경에서 `NEXT_PUBLIC_API_URL`이 설정되지 않은 경우, 자동으로 Mock API 모드가 활성화됩니다:
-
-- **감정 분석**: 가상의 감정 분석 결과 반환
-- **AI 채팅**: 실제 Gemini API를 사용한 CBT 기반 응답
-- **히스토리**: 샘플 감정 데이터 제공
-- **프로필**: 가상 사용자 프로필 제공
-
-**Gemini API 통합**:
-- 실제 Google Gemini Pro 모델 사용
-- CBT 기반 맞춤형 응답 생성
-- 감정 컨텍스트를 고려한 개인화된 대화
-- API 실패 시 자동 폴백 응답
-
-이를 통해 백엔드 서버 없이도 실제 AI 기능을 테스트할 수 있습니다.
+- **브랜드 컨셉**: 따뜻함, 신뢰감, 현대적 디자인, 긍정적 변화
+- **PDF 리포트**: 브랜드 컬러, 카드형 레이아웃, 한글 폰트, 자동 줄바꿈, 따뜻한 메시지
+- **AI 채팅**: 감정 분석, CBT 피드백, UX 로딩 메시지, 대화 종료/리포트
 
 ---
 
-## 🧬 Ultrathink Engineering 철학
-- 첫 원리 기반 설계: "왜 이 방식인가?"를 항상 질문
-- 도메인 분리: 모듈별 명확한 책임
-- 성능 최적화: 메모이제이션, 선택적 상태 구독
-- 확장성: 레포지토리 패턴, 모듈형 아키텍처
-
-자세한 내용은 [ARCHITECTURE.md](./ARCHITECTURE.md) 참고
-
----
-
-## 🤝 기여 방법
-1. 저장소 Fork
-2. 브랜치 생성 (`git checkout -b feature/기능명`)
-3. 커밋 (`git commit -m '기능 추가'`)
-4. 브랜치 Push (`git push origin feature/기능명`)
-5. Pull Request 생성
-
----
-
-## 📄 라이선스
-
-이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 참고
-
----
-
-## 📬 연락처
-- **저장소**: [github.com/BeMore-CapstoneDesign/bemoreFrontend](https://github.com/BeMore-CapstoneDesign/bemoreFrontend)
-- **이슈**: [github.com/BeMore-CapstoneDesign/bemoreFrontend/issues](https://github.com/BeMore-CapstoneDesign/bemoreFrontend/issues)
-
----
-
-<div align="center">
-BeMore Team이 ❤️와 함께 만듦
-</div>
+## 🙌 BeMore는 여러분의 마음을 항상 응원합니다!
