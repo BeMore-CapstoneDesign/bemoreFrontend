@@ -1,7 +1,7 @@
 import { ChatMessage, EmotionAnalysis } from '../types';
 
-const GEMINI_API_KEY = 'AIzaSyB68k-BYfhYsQn2P76xZgVPzXfPXrtLkUg';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyB68k-BYfhYsQn2P76xZgVPzXfPXrtLkUg';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent';
 
 interface GeminiRequest {
   contents: {
@@ -57,16 +57,16 @@ class GeminiService {
     const now = Date.now();
     const timeSinceLastRequest = now - this.lastRequestTime;
     
-    // 분당 최대 10회 요청 제한
-    if (this.requestCount >= 10 && timeSinceLastRequest < 60000) {
+    // 분당 최대 5회 요청 제한 (할당량 절약)
+    if (this.requestCount >= 5 && timeSinceLastRequest < 60000) {
       const waitTime = 60000 - timeSinceLastRequest;
       await this.delay(waitTime);
       this.requestCount = 0;
     }
     
-    // 요청 간 최소 1초 간격
-    if (timeSinceLastRequest < 1000) {
-      await this.delay(1000 - timeSinceLastRequest);
+    // 요청 간 최소 2초 간격 (할당량 절약)
+    if (timeSinceLastRequest < 2000) {
+      await this.delay(2000 - timeSinceLastRequest);
     }
     
     this.lastRequestTime = Date.now();
