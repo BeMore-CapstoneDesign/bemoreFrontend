@@ -45,10 +45,8 @@ class GeminiService {
 
   constructor() {
     this.apiKey = GEMINI_API_KEY;
-    // 개발 환경에서만 로그 표시 (서버 사이드에서만)
-    if (typeof window === 'undefined' && process.env.NODE_ENV === 'development') {
-      console.log('Gemini API 키 설정됨:', this.apiKey.substring(0, 10) + '...');
-    }
+    // 임시로 로그 활성화
+    console.log('Gemini API 키 설정됨:', this.apiKey.substring(0, 10) + '...');
   }
 
   private async delay(ms: number): Promise<void> {
@@ -116,7 +114,7 @@ class GeminiService {
         ],
       };
 
-      // API 호출 로그 제거
+      console.log('Gemini API 호출 중...', { url: GEMINI_API_URL, promptLength: prompt.length });
 
       const response = await fetch(`${GEMINI_API_URL}?key=${this.apiKey}`, {
         method: 'POST',
@@ -126,14 +124,15 @@ class GeminiService {
         body: JSON.stringify(requestBody),
       });
 
-      // 응답 상태 로그 제거
+      console.log('Gemini API 응답 상태:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
-        // 에러 응답 로그 제거
+        console.error('Gemini API 에러 응답:', errorText);
         
         // 429 에러 (Rate Limit)인 경우 특별 처리
         if (response.status === 429) {
+          console.log('Rate limit exceeded, using fallback response');
           throw new Error('RATE_LIMIT_EXCEEDED');
         }
         
@@ -208,60 +207,56 @@ CBT 피드백:
   }
 
   private getFallbackResponse(userMessage: string, emotionContext?: EmotionAnalysis): string {
-    // 감정 키워드에 따른 맞춤형 응답
-    const emotionKeywords = {
-      '화': ['분노', '화가', '짜증', '열받', '빡쳐'],
-      '슬픔': ['슬프', '우울', '우울해', '슬퍼', '눈물'],
-      '불안': ['불안', '걱정', '스트레스', '긴장', '초조'],
-      '기쁨': ['기쁘', '행복', '즐거', '신나', '좋아'],
-      '중립': ['그냥', '보통', '평범', '괜찮', '그래']
-    };
+    // 사용자 메시지 길이와 내용에 따른 다양한 응답
+    const messageLength = userMessage.length;
+    const isShortMessage = messageLength < 10;
+    const isQuestion = userMessage.includes('?') || userMessage.includes('뭐') || userMessage.includes('무엇');
+    
+    // 일반적인 응답 풀
+    const generalResponses = [
+      '네, 말씀해주세요. 어떤 감정을 느끼고 계신지 더 자세히 들려주세요.',
+      '그런 감정을 느끼시는 것은 자연스러운 일입니다. 함께 이 감정을 탐색해보겠습니다.',
+      'CBT 관점에서 보면, 이런 생각 패턴을 인식하는 것이 첫 번째 단계입니다.',
+      '현재 상황을 다른 관점에서 바라보는 방법을 함께 찾아보겠습니다.',
+      '스트레스 관리에 도움이 될 수 있는 몇 가지 기법을 제안드릴게요.',
+      '감정은 우리에게 중요한 신호를 보내는 메신저입니다. 이 감정이 무엇을 말하려는지 들어보세요.',
+      '긍정적 사고로 전환하는 방법을 함께 연습해보겠습니다.',
+      '이런 상황에서 마음챙김 기법을 활용해보는 것은 어떨까요?',
+      '인지 재구성 기법을 통해 다른 관점을 찾아보겠습니다.',
+      '자기 동정과 함께 이 감정을 탐색해보겠습니다.',
+      '현재 상황을 더 균형잡힌 관점에서 바라보는 방법을 함께 찾아보겠습니다.',
+      '감정 관리에 도움이 될 수 있는 몇 가지 기법을 제안드릴게요.',
+      '이런 감정을 느끼시는 것은 당연한 일입니다. 함께 이 감정을 이해해보겠습니다.',
+      'CBT 기법을 통해 이 감정을 다루는 방법을 함께 찾아보겠습니다.',
+      '현재 상황을 다른 각도에서 바라보는 방법을 함께 탐색해보겠습니다.'
+    ];
 
-    // 사용자 메시지에서 감정 키워드 찾기
-    let detectedEmotion = '중립';
-    for (const [emotion, keywords] of Object.entries(emotionKeywords)) {
-      if (keywords.some(keyword => userMessage.includes(keyword))) {
-        detectedEmotion = emotion;
-        break;
-      }
+    // 질문에 대한 응답
+    if (isQuestion) {
+      const questionResponses = [
+        '좋은 질문이네요! CBT 관점에서 보면, 이런 질문을 하는 것 자체가 인지 재구성의 첫 단계입니다.',
+        '그 질문에 대해 함께 생각해보겠습니다. 어떤 관점에서 바라보고 계신가요?',
+        '흥미로운 질문입니다. 이 질문이 현재 감정 상태와 어떤 관련이 있을까요?',
+        '그런 질문을 하시는 이유가 궁금합니다. 더 자세히 들려주세요.',
+        'CBT에서는 이런 질문들이 중요한 역할을 합니다. 함께 탐색해보겠습니다.'
+      ];
+      return questionResponses[Math.floor(Math.random() * questionResponses.length)];
     }
 
-    // 감정별 맞춤형 응답
-    const emotionResponses = {
-      '화': [
-        '화가 나는 상황을 겪으셨군요. 그런 감정을 느끼는 것은 자연스러운 일입니다.',
-        '분노는 우리에게 중요한 신호를 보내는 감정입니다. 이 감정이 무엇을 말하려는지 들어보세요.',
-        'CBT 관점에서 보면, 분노를 인식하고 관리하는 것이 중요합니다.',
-        '현재 상황을 다른 관점에서 바라보는 방법을 함께 찾아보겠습니다.'
-      ],
-      '슬픔': [
-        '슬픈 감정을 느끼고 계시는군요. 그런 감정을 표현하는 것은 용기 있는 일입니다.',
-        '우울한 감정은 일시적일 수 있습니다. 시간이 지나면 나아질 것입니다.',
-        '이 감정이 영구적일 것 같다고 생각하시나요? 다른 관점에서 바라볼 수 있을까요?',
-        '자기 동정과 인지 재구성 기법을 함께 연습해보겠습니다.'
-      ],
-      '불안': [
-        '불안한 감정을 느끼고 계시는군요. 그런 감정은 우리에게 중요한 신호입니다.',
-        '스트레스 관리에 도움이 될 수 있는 몇 가지 기법을 제안드릴게요.',
-        '마음챙김 기법을 활용해보는 것은 어떨까요?',
-        '현재 상황을 더 균형잡힌 관점에서 바라보는 방법을 함께 찾아보겠습니다.'
-      ],
-      '기쁨': [
-        '기쁜 감정을 느끼고 계시는군요! 그런 긍정적인 감정을 잘 활용하고 계시네요.',
-        '행복한 감정을 유지하는 방법을 함께 탐색해보겠습니다.',
-        '이 긍정적인 감정을 어떻게 더 잘 활용할 수 있을까요?',
-        '감사 연습과 긍정적 사고를 계속 유지해보세요.'
-      ],
-      '중립': [
-        '네, 말씀해주세요. 어떤 감정을 느끼고 계신지 더 자세히 들려주세요.',
-        '그런 감정을 느끼시는 것은 자연스러운 일입니다. 함께 이 감정을 탐색해보겠습니다.',
-        'CBT 관점에서 보면, 이런 생각 패턴을 인식하는 것이 첫 번째 단계입니다.',
-        '현재 상황을 다른 관점에서 바라보는 방법을 함께 찾아보겠습니다.'
-      ]
-    };
+    // 짧은 메시지에 대한 응답
+    if (isShortMessage) {
+      const shortResponses = [
+        '네, 더 자세히 들려주세요.',
+        '그런 감정을 느끼고 계시는군요. 더 구체적으로 말씀해주세요.',
+        '어떤 상황에서 그런 감정을 느끼셨나요?',
+        '그 감정에 대해 더 자세히 이야기해주세요.',
+        '현재 상황을 더 구체적으로 설명해주시면 도움을 드릴 수 있을 것 같습니다.'
+      ];
+      return shortResponses[Math.floor(Math.random() * shortResponses.length)];
+    }
 
-    const responses = emotionResponses[detectedEmotion as keyof typeof emotionResponses];
-    return responses[Math.floor(Math.random() * responses.length)];
+    // 일반적인 응답
+    return generalResponses[Math.floor(Math.random() * generalResponses.length)];
   }
 }
 
