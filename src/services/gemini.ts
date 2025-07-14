@@ -57,16 +57,16 @@ class GeminiService {
     const now = Date.now();
     const timeSinceLastRequest = now - this.lastRequestTime;
     
-    // 분당 최대 5회 요청 제한 (할당량 절약)
-    if (this.requestCount >= 5 && timeSinceLastRequest < 60000) {
+    // 분당 최대 2회 요청 제한 (할당량 절약)
+    if (this.requestCount >= 2 && timeSinceLastRequest < 60000) {
       const waitTime = 60000 - timeSinceLastRequest;
       await this.delay(waitTime);
       this.requestCount = 0;
     }
     
-    // 요청 간 최소 2초 간격 (할당량 절약)
-    if (timeSinceLastRequest < 2000) {
-      await this.delay(2000 - timeSinceLastRequest);
+    // 요청 간 최소 5초 간격 (할당량 절약)
+    if (timeSinceLastRequest < 5000) {
+      await this.delay(5000 - timeSinceLastRequest);
     }
     
     this.lastRequestTime = Date.now();

@@ -10,8 +10,14 @@ class ApiService {
     this.isMockMode = process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_API_URL;
     
     if (this.isMockMode) {
-      // API 키 테스트 (로그 없이)
-      geminiService.testAPIKey();
+      // API 키 테스트
+      geminiService.testAPIKey().then(isValid => {
+        if (isValid) {
+          console.log('✅ Gemini API 연결 성공');
+        } else {
+          console.log('🔧 Mock 모드 활성화 - 할당량 초과로 인해 폴백 응답 사용');
+        }
+      });
     }
     
     this.api = axios.create({
