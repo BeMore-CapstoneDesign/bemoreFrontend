@@ -1,7 +1,7 @@
 import { ChatMessage, EmotionAnalysis } from '../types';
 
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyB68k-BYfhYsQn2P76xZgVPzXfPXrtLkUg';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL = process.env.NEXT_PUBLIC_GEMINI_API_URL || 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
 
 interface GeminiRequest {
   contents: {
