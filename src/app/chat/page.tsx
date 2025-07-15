@@ -48,10 +48,10 @@ function ReportModal({ isOpen, onClose, report }: ReportModalProps) {
   };
 
   // 홈으로 이동 핸들러 (모달 닫기 + 홈 이동)
-  const handleGoHome = () => {
-    onClose?.(); // 혹시 있을 cleanup
-    onClose?.(); // 혹시 있을 cleanup
-  };
+  // const handleGoHome = () => {
+  //   onClose?.(); // 혹시 있을 cleanup
+  //   onClose?.(); // 혹시 있을 cleanup
+  // };
 
   if (!isOpen || !report) return null;
 

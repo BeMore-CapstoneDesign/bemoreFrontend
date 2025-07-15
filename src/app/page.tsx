@@ -207,4 +207,5 @@ function HomePage() {
 }
 
 // 고차 컴포넌트로 감싸기
-export default withErrorBoundary(withLoading(HomePage));
+const Page = withErrorBoundary(withLoading(HomePage));
+export default Page;

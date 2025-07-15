@@ -1,25 +1,16 @@
 import React from 'react';
 import { useUIStore } from '../../modules/stores';
 
-interface WithLoadingProps {
-  loading?: boolean;
-  fallback?: React.ReactNode;
-}
-
 export function withLoading<P extends object>(
   Component: React.ComponentType<P>,
   fallback?: React.ReactNode
-) {
-  return function WithLoading(props: P & WithLoadingProps) {
+): React.FC<P> {
+  return function WithLoading(props: P) {
     const { isLoading } = useUIStore();
-    const { loading: propLoading, fallback: propFallback, ...restProps } = props;
-    
-    const isCurrentlyLoading = propLoading !== undefined ? propLoading : isLoading;
-    const loadingFallback = propFallback || fallback;
 
-    if (isCurrentlyLoading) {
-      if (loadingFallback) {
-        return <>{loadingFallback}</>;
+    if (isLoading) {
+      if (fallback) {
+        return <>{fallback}</>;
       }
 
       return (
@@ -53,7 +44,7 @@ export function withLoading<P extends object>(
       );
     }
 
-    return <Component {...(restProps as P)} />;
+    return <Component {...props} />;
   };
 }
 

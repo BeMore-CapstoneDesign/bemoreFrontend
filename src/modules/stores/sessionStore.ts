@@ -40,7 +40,7 @@ export const useSessionStore = create<SessionState>()(
             currentSession: {
               id: sessionId,
               userId: 'user_1', // TODO: 실제 사용자 ID
-              startTime: new Date(),
+              startTime: new Date().toISOString(),
               emotionHistory: [],
               chatHistory: [],
             },
@@ -54,7 +54,7 @@ export const useSessionStore = create<SessionState>()(
             set({
               currentSession: {
                 ...currentSession,
-                endTime: new Date(),
+                endTime: new Date().toISOString(),
               },
             });
           }
@@ -99,9 +99,9 @@ export const useSessionStore = create<SessionState>()(
         getSessionDuration: () => {
           const { currentSession } = get();
           if (!currentSession?.startTime) return null;
-          
-          const endTime = currentSession.endTime || new Date();
-          return endTime.getTime() - currentSession.startTime.getTime();
+          const start = new Date(currentSession.startTime as string);
+          const end = new Date((currentSession.endTime as string) || new Date().toISOString());
+          return end.getTime() - start.getTime();
         },
         
         getEmotionTrend: () => {

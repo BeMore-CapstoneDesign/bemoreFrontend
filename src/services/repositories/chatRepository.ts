@@ -21,7 +21,7 @@ export interface ChatRepository {
 export class ChatRepositoryImpl implements ChatRepository {
   async sendMessage(message: string, context?: ChatContext): Promise<ChatMessage> {
     try {
-      return await apiService.sendChatMessage(message, context?.recentEmotion);
+      return await apiService.sendChatMessage(message, context?.recentEmotion?.emotion);
     } catch (error) {
       console.error('채팅 메시지 전송 실패:', error);
       throw new Error('메시지 전송 중 오류가 발생했습니다.');

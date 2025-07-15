@@ -42,7 +42,7 @@ export default function HistoryPage() {
     
     ui.setLoading(true);
     try {
-      const data = await apiService.getHistory(user.user.id, 100);
+      const data = await apiService.getSessionHistory(user.user.id);
       setHistory(data);
     } catch (error) {
       console.error('히스토리 로드 실패:', error);
@@ -92,7 +92,7 @@ export default function HistoryPage() {
     if (!user.user?.id) return;
     
     try {
-      const blob = await apiService.generateReport('current-session');
+      const blob = await apiService.generateSessionReport('current-session');
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

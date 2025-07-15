@@ -80,7 +80,7 @@ export function withErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
   fallback?: ReactNode,
   onError?: (error: Error, errorInfo: ErrorInfo) => void
-) {
+): React.FC<P> {
   return function WithErrorBoundary(props: P) {
     return (
       <ErrorBoundary fallback={fallback} onError={onError}>

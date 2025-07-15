@@ -27,7 +27,7 @@ export class EmotionRepositoryImpl implements EmotionRepository {
 
   async getHistory(userId: string, limit: number = 50): Promise<EmotionAnalysis[]> {
     try {
-      return await apiService.getHistory(userId, limit);
+      return await apiService.getSessionHistory(userId);
     } catch (error) {
       console.error('히스토리 조회 실패:', error);
       throw new Error('히스토리 조회 중 오류가 발생했습니다.');
@@ -37,7 +37,7 @@ export class EmotionRepositoryImpl implements EmotionRepository {
   async getSessionHistory(_sessionId: string): Promise<EmotionAnalysis[]> {
     try {
       // TODO: 세션별 히스토리 API 구현
-      return await apiService.getHistory('user_1', 100);
+      return await apiService.getSessionHistory('user_1');
     } catch (error) {
       console.error('세션 히스토리 조회 실패:', error);
       throw new Error('세션 히스토리 조회 중 오류가 발생했습니다.');
@@ -56,7 +56,8 @@ export class EmotionRepositoryImpl implements EmotionRepository {
 
   async exportReport(sessionId: string): Promise<Blob> {
     try {
-      return await apiService.generateReport(sessionId);
+      const blob = await apiService.generateSessionReport(sessionId);
+      return blob;
     } catch (error) {
       console.error('리포트 생성 실패:', error);
       throw new Error('리포트 생성 중 오류가 발생했습니다.');
