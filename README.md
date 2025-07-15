@@ -2,6 +2,8 @@
 
 BeMore는 **NestJS 백엔드 + Next.js 프론트엔드** 기반으로 멀티모달 감정 분석, 인지행동치료(CBT) 피드백, 대화 리포트 PDF 생성까지 제공하는 현대적 심리 케어 서비스입니다.
 
+> 🎉 **최근 업데이트**: Gemini API 모델 업데이트 및 데이터베이스 세션 관리 개선 완료!
+
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-10-red?style=for-the-badge&logo=nestjs)](https://nestjs.com/)
@@ -138,6 +140,27 @@ npm run dev
 - **백엔드 API**: http://localhost:3000/api
 - **API 문서**: http://localhost:3000/api/docs
 
+### 5. **기능 테스트**
+```bash
+# 백엔드 API 테스트
+curl -X POST http://localhost:3000/api/chat/gemini \
+  -H "Content-Type: application/json" \
+  -d '{"message": "안녕하세요, 오늘 기분이 좋지 않아요"}'
+
+# 예상 응답
+{
+  "success": true,
+  "data": {
+    "content": "안녕하세요. 오늘 기분이 좋지 않다고 하셨네요...",
+    "emotionAnalysis": {
+      "primaryEmotion": "슬픔",
+      "confidence": 0.95,
+      "suggestions": ["현재 상황에 대한 구체적인 내용 파악..."]
+    }
+  }
+}
+```
+
 ---
 
 ## 🛠️ **개발 가이드**
@@ -250,6 +273,23 @@ npm run test
 npm run test:e2e
 ```
 
+## 🔧 **최근 해결된 문제들**
+
+### ✅ **Gemini API 모델 업데이트**
+- **문제**: `gemini-pro` 모델이 더 이상 지원되지 않음
+- **해결**: `gemini-1.5-flash` 모델로 업데이트
+- **결과**: AI 채팅 기능 정상 작동
+
+### ✅ **데이터베이스 세션 관리 개선**
+- **문제**: 외래키 제약 조건 위반으로 메시지 저장 실패
+- **해결**: 세션 생성 로직 단순화 및 사용자 생성 순서 최적화
+- **결과**: 안정적인 세션 및 메시지 저장
+
+### ✅ **백엔드-프론트엔드 통합 완료**
+- **상태**: 모든 API 엔드포인트 정상 작동
+- **테스트**: 실제 채팅 및 감정 분석 기능 검증 완료
+- **성능**: 빠른 응답 시간 및 안정적인 데이터 처리
+
 ---
 
 ## 📄 **문서**
@@ -259,6 +299,27 @@ npm run test:e2e
 - [🏗️ 아키텍처 문서](ARCHITECTURE.md)
 - [📈 마이그레이션 계획](MIGRATION_PLAN.md)
 - [⚙️ 백엔드 환경 설정](BACKEND_ENV_STATUS.md)
+- [🔍 문제 해결 가이드](TROUBLESHOOTING.md)
+
+## 🚀 **다음 개발 계획**
+
+### **단기 목표 (1-2주)**
+- [ ] 사용자 인증 시스템 구현
+- [ ] 음성 입력 기능 추가
+- [ ] 실시간 감정 분석 대시보드
+- [ ] 모바일 앱 최적화
+
+### **중기 목표 (1-2개월)**
+- [ ] 멀티모달 감정 분석 (음성 + 표정)
+- [ ] 개인화된 CBT 프로그램
+- [ ] 그룹 세션 기능
+- [ ] AI 기반 진단 시스템
+
+### **장기 목표 (3-6개월)**
+- [ ] 전문가 상담사 연동
+- [ ] 임상 데이터 분석
+- [ ] 연구 기관 협력
+- [ ] 글로벌 서비스 확장
 
 ---
 
