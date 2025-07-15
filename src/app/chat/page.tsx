@@ -22,6 +22,7 @@ import { PDFService } from '../../services/pdfService';
 import { geminiService } from '../../services/gemini';
 import { ChatMessage, AnalysisReport } from '../../types';
 import { emotionEmojis } from '../../utils/emotion';
+import { useRouter } from 'next/navigation';
 
 // 분석 리포트 모달 컴포넌트
 interface ReportModalProps {
@@ -32,6 +33,7 @@ interface ReportModalProps {
 
 function ReportModal({ isOpen, onClose, report }: ReportModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  // router는 상위에서 받아옴
 
   const handlePDFDownload = async () => {
     if (!report) return;
@@ -45,6 +47,12 @@ function ReportModal({ isOpen, onClose, report }: ReportModalProps) {
     }
   };
 
+  // 홈으로 이동 핸들러 (모달 닫기 + 홈 이동)
+  const handleGoHome = () => {
+    onClose?.(); // 혹시 있을 cleanup
+    onClose?.(); // 혹시 있을 cleanup
+  };
+
   if (!isOpen || !report) return null;
 
   return (
@@ -54,9 +62,10 @@ function ReportModal({ isOpen, onClose, report }: ReportModalProps) {
           <h2 className="text-2xl font-bold text-gray-900">대화 분석 리포트</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-violet-50 rounded-full transition-colors"
+            aria-label="홈으로"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 text-violet-600" />
           </button>
         </div>
 
@@ -167,17 +176,18 @@ function ReportModal({ isOpen, onClose, report }: ReportModalProps) {
           </Card>
         </div>
 
-        <div className="flex justify-end space-x-3 mt-6 pt-6 border-t">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-8 pt-6 border-t">
           <Button
             onClick={onClose}
-            variant="outline"
-            className="px-6"
+            variant="secondary"
+            className="px-6 bg-violet-600 hover:bg-violet-700 text-white font-semibold shadow-md"
           >
-            닫기
+            홈으로
           </Button>
           <Button
             onClick={handlePDFDownload}
-            className="px-6"
+            className="px-6 border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 font-semibold"
+            variant="outline"
           >
             <FileText className="w-4 h-4 mr-2" />
             PDF 저장
@@ -186,6 +196,23 @@ function ReportModal({ isOpen, onClose, report }: ReportModalProps) {
       </div>
     </div>
   );
+}
+
+// 클라이언트에서만 안전하게 시간 포맷
+function MessageTime({ timestamp }: { timestamp: string }) {
+  const [localTime, setLocalTime] = useState('');
+  useEffect(() => {
+    setLocalTime(new Date(timestamp).toLocaleTimeString());
+  }, [timestamp]);
+  return <span>{localTime}</span>;
+}
+
+// 안전한 고유 ID 생성 함수
+function generateUniqueId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Date.now().toString() + Math.random().toString(36).slice(2);
 }
 
 export default function ChatPage() {
@@ -198,6 +225,7 @@ export default function ChatPage() {
   const [reportLoading, setReportLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const router = useRouter();
 
   // 자동 스크롤
   const scrollToBottom = () => {
@@ -212,20 +240,10 @@ export default function ChatPage() {
   useEffect(() => {
     if (messages.length === 0) {
       const welcomeMessage: ChatMessage = {
-        id: 'welcome',
+        id: generateUniqueId(),
         role: 'assistant',
-        content: `안녕하세요! 저는 BeMore의 AI 상담사입니다. 🌟
-
-오늘 하루는 어떠셨나요? 어떤 감정을 느끼고 계신지 편하게 이야기해주세요.
-
-저는 여러분의 감정을 이해하고 함께 탐색해드릴 수 있어요:
-• 현재 감정 상태에 대한 공감과 이해
-• CBT 기법을 통한 건강한 사고 패턴 전환
-• 일상에서 실천할 수 있는 스트레스 관리법
-• 긍정적이고 균형잡힌 관점으로의 변화
-
-무엇이든 편하게 말씀해주세요. 여러분의 이야기를 듣고 있어요! 💙`,
-        timestamp: new Date(),
+        content: `안녕하세요! 저는 BeMore의 AI 상담사입니다. 🌟\n\n오늘 하루는 어떠셨나요? 어떤 감정을 느끼고 계신지 편하게 이야기해주세요.\n\n저는 여러분의 감정을 이해하고 함께 탐색해드릴 수 있어요:\n• 현재 감정 상태에 대한 공감과 이해\n• CBT 기법을 통한 건강한 사고 패턴 전환\n• 일상에서 실천할 수 있는 스트레스 관리법\n• 긍정적이고 균형잡힌 관점으로의 변화\n\n무엇이든 편하게 말씀해주세요. 여러분의 이야기를 듣고 있어요! 💙`,
+        timestamp: new Date().toISOString(),
       };
       setMessages([welcomeMessage]);
     }
@@ -234,7 +252,7 @@ export default function ChatPage() {
   // 대화 분석 리포트 생성
   const generateAnalysisReport = async (): Promise<AnalysisReport> => {
     const sessionDuration = session.currentSession?.startTime 
-      ? (new Date().getTime() - session.currentSession.startTime.getTime()) / 1000
+      ? (new Date().getTime() - new Date(session.currentSession.startTime).getTime()) / 1000
       : 0;
     
     const totalMessages = messages.length;
@@ -323,14 +341,15 @@ export default function ChatPage() {
     }
   };
 
+  // 채팅 전송 함수
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || ui.isLoading) return;
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: generateUniqueId(),
       role: 'user',
       content: inputMessage,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -341,21 +360,20 @@ export default function ChatPage() {
     try {
       // 최근 감정 분석 결과를 컨텍스트로 전달
       const recentEmotion = session.currentSession?.emotionHistory[session.currentSession.emotionHistory.length - 1];
-      
       const response = await apiService.sendChatMessage(
-        inputMessage, 
+        inputMessage,
+        session.currentSession?.id,
         recentEmotion
       );
-      
       setMessages(prev => [...prev, response]);
       session.addChatMessage(response);
     } catch (error) {
       console.error('채팅 전송 실패:', error);
       const errorMessage: ChatMessage = {
-        id: Date.now().toString(),
+        id: generateUniqueId(),
         role: 'assistant',
         content: '죄송합니다. 메시지 전송 중 오류가 발생했습니다. 다시 시도해주세요.',
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -384,6 +402,12 @@ export default function ChatPage() {
     '기쁜 일이 있어서 좋아요! 😊',
   ];
 
+  // 홈으로 이동 핸들러 (모달 닫기 + 홈 이동)
+  const handleGoHome = () => {
+    setShowReportModal(false);
+    router.push('/');
+  };
+
   return (
     <Layout>
       <div className="w-full">
@@ -410,7 +434,7 @@ export default function ChatPage() {
                         <Bot className="w-4 h-4 text-violet-600" />
                       )}
                       <span className="text-xs opacity-60">
-                        {new Date(message.timestamp).toLocaleTimeString()}
+                        <MessageTime timestamp={message.timestamp as string} />
                       </span>
                     </div>
                     <div>{message.content}</div>
@@ -515,7 +539,7 @@ export default function ChatPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">시작 시간:</span>
-                    <span>{session.currentSession.startTime?.toLocaleTimeString()}</span>
+                    <span>{session.currentSession.startTime ? <MessageTime timestamp={session.currentSession.startTime} /> : '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">분석 횟수:</span>
@@ -535,7 +559,7 @@ export default function ChatPage() {
       {/* 분석 리포트 모달 */}
       <ReportModal
         isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
+        onClose={handleGoHome}
         report={analysisReport}
       />
       {/* 분석 리포트 로딩 UI */}

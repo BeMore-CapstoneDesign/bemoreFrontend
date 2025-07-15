@@ -2,7 +2,7 @@
 export interface EmotionAnalysis {
   id: string;
   userId: string;
-  timestamp: Date;
+  timestamp: string; // ISO string
   vadScore: {
     valence: number; // 긍정성 (0-1)
     arousal: number; // 각성도 (0-1)
@@ -29,7 +29,7 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: Date;
+  timestamp: string; // ISO string
   emotionContext?: EmotionAnalysis;
 }
 
@@ -37,8 +37,8 @@ export interface ChatMessage {
 export interface UserSession {
   id: string;
   userId: string;
-  startTime: Date;
-  endTime?: Date;
+  startTime: string; // ISO string
+  endTime?: string; // ISO string
   emotionHistory: EmotionAnalysis[];
   chatHistory: ChatMessage[];
 }
@@ -72,6 +72,7 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+  timestamp?: string;
 }
 
 // 감정 상태 타입
