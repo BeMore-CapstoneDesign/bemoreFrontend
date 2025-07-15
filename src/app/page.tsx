@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Layout } from '../components/layout/Layout';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
@@ -13,21 +13,38 @@ import {
   Smile,
   Activity
 } from 'lucide-react';
-import { useAppStores } from '../modules/stores';
+import { useAppStore } from '../modules/store';
 import { emotionEmojis, getEmotionAdvice } from '../utils/emotion';
 import { withErrorBoundary } from '../components/hoc/withErrorBoundary';
 import { withLoading } from '../components/hoc/withLoading';
 import { EmotionAnalysis } from '../types';
 
+// 클라이언트에서만 안전하게 시간 포맷
+function SafeTimeDisplay({ timestamp }: { timestamp: string }) {
+  const [localTime, setLocalTime] = useState('');
+  
+  useEffect(() => {
+    setLocalTime(new Date(timestamp).toLocaleTimeString());
+  }, [timestamp]);
+  
+  return <span>{localTime}</span>;
+}
+
 function HomePage() {
-  const { session, ui, currentUser } = useAppStores();
+  const { currentSession, currentEmotion, user } = useAppStore();
   
   // 오늘의 감정 요약 데이터 (실제로는 API에서 가져올 예정)
   const todayEmotion = {
-    primary: ui.currentEmotion,
-    count: session.currentSession?.emotionHistory.length || 0,
-    averageValence: session.getAverageValence(),
-    trend: session.getEmotionTrend(),
+    primary: currentEmotion,
+    count: currentSession?.emotionHistory.length || 0,
+    averageValence: currentSession?.emotionHistory.length > 0 
+      ? currentSession.emotionHistory.reduce((sum, item) => sum + item.vadScore.valence, 0) / currentSession.emotionHistory.length
+      : 0,
+    trend: currentSession?.emotionHistory.length > 1 
+      ? currentSession.emotionHistory[0].vadScore.valence < currentSession.emotionHistory[currentSession.emotionHistory.length - 1].vadScore.valence
+        ? '개선됨'
+        : '안정적'
+      : '변화 없음'
   };
 
   const quickActions = [
@@ -60,7 +77,7 @@ function HomePage() {
         {/* 헤더 */}
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            안녕하세요, {currentUser?.name || '사용자'}님! 👋
+            안녕하세요, {user?.name || '사용자'}님! 👋
           </h1>
           <p className="text-xl text-gray-600">
             오늘도 당신의 감정을 더 깊이 이해해보세요
@@ -143,7 +160,7 @@ function HomePage() {
         </div>
 
         {/* 최근 활동 */}
-        {session.currentSession && session.currentSession.emotionHistory.length > 0 && (
+        {currentSession && currentSession.emotionHistory.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -153,7 +170,7 @@ function HomePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {session.currentSession.emotionHistory.slice(-3).reverse().map((analysis: EmotionAnalysis) => (
+                {currentSession.emotionHistory.slice(-3).reverse().map((analysis: EmotionAnalysis) => (
                   <div key={analysis.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className="text-2xl">
@@ -164,7 +181,7 @@ function HomePage() {
                           {analysis.emotion}
                         </div>
                         <div className="text-sm text-gray-600">
-                          {new Date(analysis.timestamp).toLocaleTimeString()}
+                          <SafeTimeDisplay timestamp={analysis.timestamp} />
                         </div>
                       </div>
                     </div>

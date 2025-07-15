@@ -13,7 +13,11 @@ import {
   BarChart3,
   Lightbulb,
   Target,
-  ArrowRight
+  ArrowRight,
+  Brain,
+  Activity,
+  CheckCircle,
+  Sparkles
 } from 'lucide-react';
 import { useAppStore } from '../../modules/store';
 import { apiService } from '../../services/api';
@@ -21,6 +25,132 @@ import { EmotionAnalysis } from '../../types';
 import { emotionEmojis, getConfidenceColor } from '../../utils/emotion';
 
 type MediaType = 'image' | 'audio' | 'text';
+
+// 고도화된 로딩 컴포넌트
+function AnalysisLoadingUI({ mediaType }: { mediaType: MediaType }) {
+  const [currentStep, setCurrentStep] = useState(0);
+  
+  React.useEffect(() => {
+    const steps = [
+      { name: '데이터 처리 중...', duration: 2000 },
+      { name: 'AI 모델 분석 중...', duration: 3000 },
+      { name: '감정 패턴 분석 중...', duration: 2000 },
+      { name: 'CBT 피드백 생성 중...', duration: 1500 },
+      { name: '결과 정리 중...', duration: 1000 }
+    ];
+
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      if (currentIndex < steps.length) {
+        setCurrentStep(currentIndex);
+        currentIndex++;
+      } else {
+        clearInterval(interval);
+      }
+    }, steps[currentIndex]?.duration || 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const steps = [
+    { name: '데이터 처리 중...', icon: Activity, color: 'text-blue-600' },
+    { name: 'AI 모델 분석 중...', icon: Brain, color: 'text-purple-600' },
+    { name: '감정 패턴 분석 중...', icon: BarChart3, color: 'text-green-600' },
+    { name: 'CBT 피드백 생성 중...', icon: Lightbulb, color: 'text-yellow-600' },
+    { name: '결과 정리 중...', icon: CheckCircle, color: 'text-indigo-600' }
+  ];
+
+  const mediaTypeInfo = {
+    image: { title: '표정 분석', icon: Camera, color: 'from-blue-500 to-blue-600' },
+    audio: { title: '음성 분석', icon: Mic, color: 'from-green-500 to-green-600' },
+    text: { title: '텍스트 분석', icon: FileText, color: 'from-purple-500 to-purple-600' }
+  };
+
+  const info = mediaTypeInfo[mediaType];
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        {/* 헤더 */}
+        <div className="text-center mb-8">
+          <div className={`w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r ${info.color} flex items-center justify-center`}>
+            <info.icon className="w-10 h-10 text-white" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">{info.title}</h3>
+          <p className="text-gray-600">AI가 당신의 감정을 분석하고 있습니다</p>
+        </div>
+
+        {/* 진행 단계 */}
+        <div className="space-y-4 mb-8">
+          {steps.map((step, index) => {
+            const StepIcon = step.icon;
+            const isActive = index === currentStep;
+            const isCompleted = index < currentStep;
+            
+            return (
+              <div key={index} className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
+                isActive ? 'bg-indigo-50 border border-indigo-200' : 
+                isCompleted ? 'bg-green-50 border border-green-200' : 
+                'bg-gray-50 border border-gray-200'
+              }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  isActive ? 'bg-indigo-600' : 
+                  isCompleted ? 'bg-green-600' : 
+                  'bg-gray-400'
+                }`}>
+                  {isCompleted ? (
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  ) : (
+                    <StepIcon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-300'}`} />
+                  )}
+                </div>
+                <span className={`font-medium ${
+                  isActive ? 'text-indigo-900' : 
+                  isCompleted ? 'text-green-900' : 
+                  'text-gray-500'
+                }`}>
+                  {step.name}
+                </span>
+                {isActive && (
+                  <div className="ml-auto">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent"></div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 진행률 바 */}
+        <div className="mb-6">
+          <div className="flex justify-between text-sm text-gray-600 mb-2">
+            <span>분석 진행률</span>
+            <span>{Math.round(((currentStep + 1) / steps.length) * 100)}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        {/* 팁 */}
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-100">
+          <div className="flex items-center space-x-2 mb-2">
+            <Sparkles className="w-4 h-4 text-indigo-600" />
+            <span className="text-sm font-medium text-indigo-900">분석 팁</span>
+          </div>
+          <p className="text-xs text-indigo-700">
+            {mediaType === 'image' && '표정의 미세한 변화까지 분석하여 정확한 감정을 파악합니다.'}
+            {mediaType === 'audio' && '음성의 톤, 속도, 강세를 분석하여 감정 상태를 평가합니다.'}
+            {mediaType === 'text' && '텍스트의 어조와 내용을 분석하여 감정 패턴을 찾아냅니다.'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AnalysisPage() {
   const { addEmotionAnalysis, setLoading, isLoading } = useAppStore();
@@ -453,6 +583,11 @@ export default function AnalysisPage() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {/* 고도화된 로딩 UI */}
+        {isLoading && selectedType && (
+          <AnalysisLoadingUI mediaType={selectedType} />
         )}
       </div>
     </Layout>

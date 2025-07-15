@@ -62,6 +62,14 @@ body {
   animation: fadeIn 0.3s ease-out;
 }
 
+/* 채팅 메시지 텍스트 줄바꿈 */
+.chat-message-text {
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
 /* 감정별 그라데이션 */
 .emotion-happy {
   background: linear-gradient(135deg, #10B981, #059669);

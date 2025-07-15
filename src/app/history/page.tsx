@@ -12,7 +12,7 @@ import {
   FileText,
   Search
 } from 'lucide-react';
-import { useAppStores } from '../../modules/stores';
+import { useAppStore } from '../../modules/store';
 import { apiService } from '../../services/api';
 import { EmotionAnalysis } from '../../types';
 import { emotionEmojis, calculateEmotionTrend } from '../../utils/emotion';
@@ -32,7 +32,7 @@ import {
 } from 'recharts';
 
 export default function HistoryPage() {
-  const { user, ui } = useAppStores();
+  const { currentSession, user } = useAppStore();
   const [history, setHistory] = useState<EmotionAnalysis[]>([]);
   const [filteredHistory, setFilteredHistory] = useState<EmotionAnalysis[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('week');
@@ -42,18 +42,15 @@ export default function HistoryPage() {
   const [viewMode, setViewMode] = useState<'basic' | 'advanced' | 'realtime'>('basic');
 
   const loadHistory = useCallback(async () => {
-    if (!user.user?.id) return;
+    if (!user?.id) return;
     
-    ui.setLoading(true);
     try {
-      const data = await apiService.getSessionHistory(user.user.id);
+      const data = await apiService.getSessionHistory(user.id);
       setHistory(data);
     } catch (error) {
       console.error('히스토리 로드 실패:', error);
-    } finally {
-      ui.setLoading(false);
     }
-  }, [user.user?.id, ui]);
+  }, [user?.id]);
 
   useEffect(() => {
     loadHistory();
@@ -93,7 +90,7 @@ export default function HistoryPage() {
   }, [filterHistory]);
 
   const downloadReport = async () => {
-    if (!user.user?.id) return;
+    if (!user?.id) return;
     
     try {
       const blob = await apiService.generateSessionReport('current-session');
@@ -257,83 +254,98 @@ export default function HistoryPage() {
             {/* 통계 요약 */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl font-bold text-indigo-600 mb-2">
-                    {filteredHistory.length}
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <History className="w-8 h-8 text-indigo-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">총 분석</p>
+                      <p className="text-2xl font-bold text-gray-900">{filteredHistory.length}</p>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">총 분석 횟수</div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl font-bold text-green-600 mb-2">
-                    {filteredHistory.length > 0 
-                      ? Math.round(filteredHistory.reduce((sum, item) => sum + item.vadScore.valence, 0) / filteredHistory.length * 100)
-                      : 0}%
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <TrendingUp className="w-8 h-8 text-green-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">감정 트렌드</p>
+                      <p className="text-2xl font-bold text-gray-900">{trend.trend}</p>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">평균 긍정성</div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">
-                    {Object.keys(emotionCounts).length}
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <BarChart3 className="w-8 h-8 text-purple-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">평균 긍정성</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {filteredHistory.length > 0 
+                          ? Math.round(filteredHistory.reduce((sum, item) => sum + item.vadScore.valence, 0) / filteredHistory.length * 100)
+                          : 0}%
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">감정 다양성</div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6 text-center">
-                  <div className={`text-3xl font-bold mb-2 ${
-                    trend.trend === 'improving' ? 'text-green-600' : 
-                    trend.trend === 'declining' ? 'text-red-600' : 'text-gray-600'
-                  }`}>
-                    {trend.trend === 'improving' ? '↗' : 
-                     trend.trend === 'declining' ? '↘' : '→'}
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <FileText className="w-8 h-8 text-orange-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">주요 감정</p>
+                      <p className="text-2xl font-bold text-gray-900 capitalize">
+                        {filteredHistory.length > 0 
+                          ? Object.entries(emotionCounts).sort(([,a], [,b]) => b - a)[0]?.[0] || '없음'
+                          : '없음'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">감정 추세</div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* 차트 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* VAD 점수 변화 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <TrendingUp className="w-5 h-5 text-indigo-600" />
-                    <span>VAD 점수 변화</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+            {/* VAD 점수 변화 차트 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <TrendingUp className="w-5 h-5 text-indigo-600" />
+                  <span>VAD 점수 변화</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis />
                       <Tooltip />
-                      <Line type="monotone" dataKey="valence" stroke="#10B981" name="긍정성" />
-                      <Line type="monotone" dataKey="arousal" stroke="#3B82F6" name="각성도" />
-                      <Line type="monotone" dataKey="dominance" stroke="#8B5CF6" name="지배성" />
+                      <Line type="monotone" dataKey="valence" stroke="#10B981" name="긍정성" strokeWidth={2} />
+                      <Line type="monotone" dataKey="arousal" stroke="#3B82F6" name="각성도" strokeWidth={2} />
+                      <Line type="monotone" dataKey="dominance" stroke="#8B5CF6" name="지배성" strokeWidth={2} />
                     </LineChart>
                   </ResponsiveContainer>
-                </CardContent>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* 감정 분포 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <BarChart3 className="w-5 h-5 text-indigo-600" />
-                    <span>감정 분포</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+            {/* 감정 분포 파이 차트 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="w-5 h-5 text-indigo-600" />
+                  <span>감정 분포</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={pieData}
@@ -341,7 +353,7 @@ export default function HistoryPage() {
                         cy="50%"
                         labelLine={false}
                         label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                        outerRadius={80}
+                        outerRadius={120}
                         fill="#8884d8"
                         dataKey="value"
                       >
@@ -352,103 +364,59 @@ export default function HistoryPage() {
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-          </>
-        )}
-
-        {/* 기본 뷰에서만 상세 기록 표시 */}
-        {viewMode === 'basic' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <FileText className="w-5 h-5 text-indigo-600" />
-                <span>상세 기록</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {filteredHistory.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <History className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>아직 분석 기록이 없습니다.</p>
-                  <p className="text-sm">감정 분석을 시작해보세요!</p>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredHistory.map((item) => (
-                    <div key={item.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="text-2xl">
-                            {emotionEmojis[item.emotion as keyof typeof emotionEmojis] || '😐'}
-                          </div>
-                          <div>
-                            <div className="font-medium capitalize">{item.emotion}</div>
-                            <div className="text-sm text-gray-600">
-                              {new Date(item.timestamp).toLocaleString()}
-                            </div>
-                          </div>
+              </CardContent>
+            </Card>
+
+            {/* 상세 기록 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <History className="w-5 h-5 text-indigo-600" />
+                  <span>상세 기록</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {filteredHistory.slice().reverse().map((item, index) => (
+                    <div 
+                      key={index}
+                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selectedEmotionDetail?.id === item.id 
+                          ? 'border-indigo-500 bg-indigo-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => setSelectedEmotionDetail(item)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="text-2xl">
+                          {emotionEmojis[item.emotion as keyof typeof emotionEmojis] || '😐'}
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm text-gray-600">신뢰도</div>
-                          <div className="font-medium">{Math.round(item.confidence * 100)}%</div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                         <div>
-                          <div className="text-sm text-gray-600 mb-1">긍정성</div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-green-500 h-2 rounded-full" 
-                              style={{ width: `${item.vadScore.valence * 100}%` }}
-                            />
+                          <div className="font-medium text-gray-900 capitalize">
+                            {item.emotion}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {Math.round(item.vadScore.valence * 100)}%
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="text-sm text-gray-600 mb-1">각성도</div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-500 h-2 rounded-full" 
-                              style={{ width: `${item.vadScore.arousal * 100}%` }}
-                            />
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {Math.round(item.vadScore.arousal * 100)}%
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="text-sm text-gray-600 mb-1">지배성</div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-purple-500 h-2 rounded-full" 
-                              style={{ width: `${item.vadScore.dominance * 100}%` }}
-                            />
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {Math.round(item.vadScore.dominance * 100)}%
+                          <div className="text-sm text-gray-600">
+                            {new Date(item.timestamp).toLocaleString()}
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <div className="text-sm font-medium text-gray-900 mb-1">CBT 피드백</div>
-                        <div className="text-sm text-gray-700">
-                          {item.cbtFeedback.cognitiveDistortion}
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-gray-900">
+                          신뢰도: {Math.round(item.confidence * 100)}%
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          V: {Math.round(item.vadScore.valence * 100)}% | 
+                          A: {Math.round(item.vadScore.arousal * 100)}% | 
+                          D: {Math.round(item.vadScore.dominance * 100)}%
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </>
         )}
       </div>
     </Layout>

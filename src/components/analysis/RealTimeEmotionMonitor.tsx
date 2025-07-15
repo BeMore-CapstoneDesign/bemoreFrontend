@@ -30,8 +30,13 @@ export default function RealTimeEmotionMonitor({
 }: RealTimeEmotionMonitorProps) {
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [alertLevel, setAlertLevel] = useState<'low' | 'medium' | 'high' | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 클라이언트 사이드에서 초기화
+  useEffect(() => {
+    setLastUpdate(new Date());
+  }, []);
 
   // 감정 변화 감지
   useEffect(() => {
@@ -153,7 +158,7 @@ export default function RealTimeEmotionMonitor({
             {/* 마지막 업데이트 */}
             <div className="text-center">
               <div className="text-2xl font-bold text-gray-900 mb-2">
-                {lastUpdate.toLocaleTimeString()}
+                {lastUpdate ? lastUpdate.toLocaleTimeString() : '--:--:--'}
               </div>
               <div className="text-sm text-gray-600">마지막 업데이트</div>
             </div>

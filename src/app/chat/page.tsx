@@ -16,10 +16,9 @@ import {
   Lightbulb,
   Heart
 } from 'lucide-react';
-import { useAppStores } from '../../modules/stores';
+import { useAppStore } from '../../modules/store';
 import { apiService } from '../../services/api';
 import { PDFService } from '../../services/pdfService';
-import { geminiService } from '../../services/gemini';
 import { ChatMessage, AnalysisReport } from '../../types';
 import { emotionEmojis } from '../../utils/emotion';
 import { useRouter } from 'next/navigation';
@@ -198,6 +197,42 @@ function ReportModal({ isOpen, onClose, report }: ReportModalProps) {
   );
 }
 
+// 분석 로딩 UI 컴포넌트
+function AnalysisLoadingUI() {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-6 relative">
+            <div className="w-full h-full border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Bot className="w-8 h-8 text-indigo-600" />
+            </div>
+          </div>
+          
+          <h3 className="text-xl font-bold text-gray-900 mb-2">대화 분석 중</h3>
+          <p className="text-gray-600 mb-6">AI가 대화 내용을 분석하고 맞춤형 리포트를 생성하고 있어요</p>
+          
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></div>
+              <span className="text-sm text-gray-700">감정 변화 패턴 분석</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+              <span className="text-sm text-gray-700">주요 인사이트 추출</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+              <span className="text-sm text-gray-700">CBT 기법 추천</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 클라이언트에서만 안전하게 시간 포맷
 function MessageTime({ timestamp }: { timestamp: string }) {
   const [localTime, setLocalTime] = useState('');
@@ -216,7 +251,7 @@ function generateUniqueId() {
 }
 
 export default function ChatPage() {
-  const { session, ui } = useAppStores();
+  const { currentSession, addChatMessage, setLoading, isLoading, startSession, endSession } = useAppStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -251,72 +286,133 @@ export default function ChatPage() {
 
   // 대화 분석 리포트 생성
   const generateAnalysisReport = async (): Promise<AnalysisReport> => {
-    const sessionDuration = session.currentSession?.startTime 
-      ? (new Date().getTime() - new Date(session.currentSession.startTime).getTime()) / 1000
+    const sessionDuration = currentSession?.startTime 
+      ? (new Date().getTime() - new Date(currentSession.startTime).getTime()) / 1000
       : 0;
     
     const totalMessages = messages.length;
     
     // 감정 변화 분석
-    const emotionHistory = session.currentSession?.emotionHistory || [];
+    const emotionHistory = currentSession?.emotionHistory || [];
     const emotionTrend = emotionHistory.length > 1 
       ? emotionHistory[0].vadScore.valence < emotionHistory[emotionHistory.length - 1].vadScore.valence
         ? '개선됨'
+        : emotionHistory[0].vadScore.valence > emotionHistory[emotionHistory.length - 1].vadScore.valence
+        ? '하락'
         : '안정적'
       : '변화 없음';
 
-    // AI를 통한 대화 분석
-    const conversationText = messages
-      .filter(msg => msg.role === 'user')
-      .map(msg => msg.content)
-      .join('\n');
+    // 대화 내용 분석
+    const userMessages = messages.filter(msg => msg.role === 'user').map(msg => msg.content);
+    const assistantMessages = messages.filter(msg => msg.role === 'assistant').map(msg => msg.content);
+    
+    // 감정 키워드 분석
+    const emotionKeywords = {
+      stress: ['스트레스', '힘들어', '부담', '압박', '짜증'],
+      anxiety: ['불안', '걱정', '긴장', '두려움', '불안해'],
+      anger: ['화나', '분노', '짜증', '열받', '화가'],
+      sadness: ['우울', '슬퍼', '우울해', '슬픔', '우울함'],
+      happiness: ['기뻐', '좋아', '행복', '즐거워', '신나']
+    };
 
-    try {
-      // Gemini 서비스의 전용 분석 메서드 사용
-      const analysisResponse = await geminiService.generateConversationAnalysis(conversationText);
-      let parsedAnalysis;
-      
-      try {
-        // JSON 응답 파싱 시도
-        const jsonMatch = analysisResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          parsedAnalysis = JSON.parse(jsonMatch[0]);
-        } else {
-          // 파싱 실패 시 기본값 사용
-          parsedAnalysis = {
-            keyInsights: ['감정 표현이 활발했습니다', '스트레스 상황에 대한 대처가 필요합니다'],
-            recommendations: ['정기적인 마음챙김 연습을 권장합니다', '일상에서 작은 감사 표현을 해보세요'],
-            cbtTechniques: ['인지 재구성', '사고 기록']
-          };
+    // 사용자 메시지에서 감정 키워드 찾기
+    const detectedEmotions: string[] = [];
+    userMessages.forEach(message => {
+      Object.entries(emotionKeywords).forEach(([emotion, keywords]) => {
+        if (keywords.some(keyword => message.includes(keyword))) {
+          detectedEmotions.push(emotion);
         }
-      } catch {
-        // 파싱 실패 시 기본값 사용
-        parsedAnalysis = {
-          keyInsights: ['감정 표현이 활발했습니다', '스트레스 상황에 대한 대처가 필요합니다'],
-          recommendations: ['정기적인 마음챙김 연습을 권장합니다', '일상에서 작은 감사 표현을 해보세요'],
-          cbtTechniques: ['인지 재구성', '사고 기록']
-        };
-      }
+      });
+    });
 
-      return {
-        sessionDuration,
-        totalMessages,
-        emotionTrend,
-        keyInsights: parsedAnalysis.keyInsights || ['감정 표현이 활발했습니다'],
-        recommendations: parsedAnalysis.recommendations || ['정기적인 마음챙김 연습을 권장합니다'],
-        cbtTechniques: parsedAnalysis.cbtTechniques || ['인지 재구성']
-      };
-    } catch (error) {
-      // 에러 시 기본 리포트 반환
-      return {
-        sessionDuration,
-        totalMessages,
-        emotionTrend,
-        keyInsights: ['감정 표현이 활발했습니다', '스트레스 상황에 대한 대처가 필요합니다'],
-        recommendations: ['정기적인 마음챙김 연습을 권장합니다', '일상에서 작은 감사 표현을 해보세요'],
-        cbtTechniques: ['인지 재구성', '사고 기록']
-      };
+    // 주요 감정 결정
+    const emotionCounts = detectedEmotions.reduce((acc, emotion) => {
+      acc[emotion] = (acc[emotion] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const primaryEmotion = Object.keys(emotionCounts).length > 0 
+      ? Object.entries(emotionCounts).sort(([,a], [,b]) => (b as number) - (a as number))[0][0]
+      : 'neutral';
+
+    // 대화 주제 분석
+    const topics = {
+      work: ['일', '직장', '업무', '회사', '프로젝트'],
+      relationship: ['관계', '친구', '가족', '연인', '사람'],
+      health: ['건강', '몸', '피로', '잠', '운동'],
+      future: ['미래', '계획', '목표', '꿈', '앞으로']
+    };
+
+    const detectedTopics = [];
+    userMessages.forEach(message => {
+      Object.entries(topics).forEach(([topic, keywords]) => {
+        if (keywords.some(keyword => message.includes(keyword))) {
+          detectedTopics.push(topic);
+        }
+      });
+    });
+
+    // 인사이트 생성
+    const insights = [];
+    if (detectedEmotions.includes('stress')) {
+      insights.push('스트레스 상황에 대한 대처가 필요해 보입니다');
     }
+    if (detectedEmotions.includes('anxiety')) {
+      insights.push('불안감을 표현하는 빈도가 높았습니다');
+    }
+    if (detectedEmotions.includes('anger')) {
+      insights.push('분노 감정에 대한 관리가 필요합니다');
+    }
+    if (userMessages.length > 5) {
+      insights.push('감정 표현이 활발하고 솔직했습니다');
+    }
+    if (insights.length === 0) {
+      insights.push('전반적으로 안정적인 감정 상태를 보여줍니다');
+    }
+
+    // 권장사항 생성
+    const recommendations = [];
+    if (primaryEmotion === 'stress') {
+      recommendations.push('정기적인 마음챙김 연습을 권장합니다');
+      recommendations.push('스트레스 해소를 위한 취미 활동을 찾아보세요');
+    } else if (primaryEmotion === 'anxiety') {
+      recommendations.push('호흡 운동과 명상을 통해 불안을 관리해보세요');
+      recommendations.push('일상에서 작은 성취감을 느낄 수 있는 활동을 해보세요');
+    } else if (primaryEmotion === 'anger') {
+      recommendations.push('분노 관리 기법을 연습해보세요');
+      recommendations.push('감정을 표현하는 건강한 방법을 찾아보세요');
+    } else if (primaryEmotion === 'sadness') {
+      recommendations.push('주변 사람들과의 소통을 늘려보세요');
+      recommendations.push('전문가의 도움을 받는 것을 고려해보세요');
+    } else {
+      recommendations.push('일상에서 작은 감사 표현을 해보세요');
+      recommendations.push('긍정적인 감정을 유지하는 활동을 계속해보세요');
+    }
+
+    // CBT 기법 추천
+    const cbtTechniques = [];
+    if (primaryEmotion === 'stress' || primaryEmotion === 'anxiety') {
+      cbtTechniques.push('인지 재구성');
+      cbtTechniques.push('점진적 근육 이완법');
+    } else if (primaryEmotion === 'anger') {
+      cbtTechniques.push('분노 관리 기법');
+      cbtTechniques.push('사고 중단법');
+    } else if (primaryEmotion === 'sadness') {
+      cbtTechniques.push('행동 활성화');
+      cbtTechniques.push('감사 일기');
+    } else {
+      cbtTechniques.push('사고 기록');
+      cbtTechniques.push('문제 해결 기법');
+    }
+
+    return {
+      sessionDuration,
+      totalMessages,
+      emotionTrend,
+      keyInsights: insights,
+      recommendations,
+      cbtTechniques
+    };
   };
 
   // 채팅 종료 처리
@@ -325,25 +421,31 @@ export default function ChatPage() {
       alert('대화 내용이 없습니다. 먼저 대화를 나눠보세요.');
       return;
     }
+    
+    // 분석 로딩 시작
     setReportLoading(true);
-    ui.setLoading(true);
+    setLoading(true);
+    
     try {
+      // 실제 분석 시간을 시뮬레이션하기 위해 약간의 지연 추가
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       const report = await generateAnalysisReport();
       setAnalysisReport(report);
       setShowReportModal(true);
-      session.endSession();
+      endSession();
     } catch (error) {
       console.error('리포트 생성 실패:', error);
       alert('리포트 생성 중 오류가 발생했습니다.');
     } finally {
       setReportLoading(false);
-      ui.setLoading(false);
+      setLoading(false);
     }
   };
 
   // 채팅 전송 함수
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || ui.isLoading) return;
+    if (!inputMessage.trim() || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: generateUniqueId(),
@@ -355,18 +457,18 @@ export default function ChatPage() {
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
     setIsTyping(true);
-    ui.setLoading(true);
+    setLoading(true);
 
     try {
       // 최근 감정 분석 결과를 컨텍스트로 전달
-      const recentEmotion = session.currentSession?.emotionHistory[session.currentSession.emotionHistory.length - 1];
+      const recentEmotion = currentSession?.emotionHistory[currentSession.emotionHistory.length - 1];
       const response = await apiService.sendChatMessage(
         inputMessage,
-        session.currentSession?.id,
+        currentSession?.id || undefined,
         recentEmotion
       );
       setMessages(prev => [...prev, response]);
-      session.addChatMessage(response);
+      addChatMessage(response);
     } catch (error) {
       console.error('채팅 전송 실패:', error);
       const errorMessage: ChatMessage = {
@@ -378,7 +480,7 @@ export default function ChatPage() {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
-      ui.setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -395,11 +497,11 @@ export default function ChatPage() {
   };
 
   const suggestions = [
-    '오늘 마음이 많이 복잡해요 😔',
+    '기분이 안 좋아요 🥲',
     '스트레스가 너무 쌓여서 힘들어요 😮‍💨',
+    '불안하고 걱정이 많아요 😰',
     '화가 나는 일이 있어서 속상해요 😤',
-    '불안한 마음이 들어서 걱정이에요 😰',
-    '기쁜 일이 있어서 좋아요! 😊',
+    '우울한 기분이에요 😔',
   ];
 
   // 홈으로 이동 핸들러 (모달 닫기 + 홈 이동)
@@ -410,169 +512,146 @@ export default function ChatPage() {
 
   return (
     <Layout>
-      <div className="w-full">
-        <div className="max-w-2xl mx-auto">
-          <Card className="relative flex flex-col w-full min-h-[500px] shadow-xl rounded-2xl bg-white border border-gray-100">
+      <div className="max-w-4xl mx-auto space-y-6 p-4">
+        {/* 헤더 */}
+        <div className="text-center">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">AI 감정 상담</h1>
+          <p className="text-sm md:text-base text-gray-600">
+            Gemini AI와 대화하며 감정을 탐색하고 CBT 피드백을 받아보세요
+          </p>
+        </div>
+
+        {/* 채팅 컨테이너 */}
+        <Card className="h-[70vh] min-h-[500px] max-h-[800px] flex flex-col">
+          <CardHeader className="border-b border-gray-200 flex-shrink-0">
+            <CardTitle className="flex items-center space-x-2">
+              <Bot className="w-5 h-5 text-indigo-600" />
+              <span>BeMore AI 상담사</span>
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="flex-1 p-0 min-h-0">
             {/* 메시지 영역 */}
-            <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50 rounded-t-2xl space-y-4">
-              {messages.map((message, i) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}
-                >
+            <div className="h-full flex flex-col">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+                {messages.map((message) => (
                   <div
-                    className={`max-w-[80%] px-4 py-3 rounded-2xl shadow-md mb-2 whitespace-pre-wrap break-words text-base leading-relaxed transition-all
-                      ${message.role === 'user'
-                        ? 'bg-violet-600 text-white rounded-br-md ml-8'
-                        : 'bg-white border border-gray-200 rounded-bl-md mr-8'}
-                    `}
+                    key={message.id}
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className="flex items-center space-x-2 mb-1">
-                      {message.role === 'user' ? (
-                        <UserIcon className="w-4 h-4" />
-                      ) : (
-                        <Bot className="w-4 h-4 text-violet-600" />
-                      )}
-                      <span className="text-xs opacity-60">
-                        <MessageTime timestamp={message.timestamp as string} />
-                      </span>
-                    </div>
-                    <div>{message.content}</div>
-                  </div>
-                </div>
-              ))}
-              {isTyping && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl shadow-md">
-                    <div className="flex items-center space-x-2">
-                      <Bot className="w-4 h-4 text-violet-600" />
-                      <span className="text-sm text-gray-500">
-                        AI 상담사가 답변을 준비하고 있어요…
-                      </span>
-                      <div className="flex space-x-1 ml-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div
+                      className={`max-w-[75%] rounded-lg p-3 ${
+                        message.role === 'user'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-900'
+                      }`}
+                    >
+                      <div className="flex items-start space-x-2">
+                        {message.role === 'assistant' && (
+                          <Bot className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+                        )}
+                        {message.role === 'user' && (
+                          <UserIcon className="w-5 h-5 text-white mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="whitespace-pre-wrap break-words overflow-hidden chat-message-text">{message.content}</div>
+                          <div className={`text-xs mt-2 ${
+                            message.role === 'user' ? 'text-indigo-200' : 'text-gray-500'
+                          }`}>
+                            <MessageTime timestamp={message.timestamp} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-            {/* 입력 & 빠른 제안 영역 - 카드 하단 완전 분리, 그림자+bg+border */}
-            <div className="sticky bottom-0 w-full bg-white border-t border-gray-200 shadow-lg rounded-b-2xl px-4 py-3 z-20">
-              <div className="flex items-end gap-2 mb-3">
-                <textarea
-                  ref={inputRef}
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="메시지를 입력하세요..."
-                  className="flex-1 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-base min-h-[44px] max-h-[120px] bg-gray-50"
-                  rows={2}
-                  disabled={ui.isLoading}
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!inputMessage.trim() || ui.isLoading}
-                  className="px-5 py-3 rounded-lg text-base font-semibold shadow-md"
-                >
-                  <Send className="w-5 h-5" />
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {suggestions.map((suggestion, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="px-4 py-2 text-sm bg-gray-100 hover:bg-violet-100 text-gray-700 rounded-full border border-gray-200 shadow-sm transition-colors"
-                  >
-                    {suggestion}
-                  </button>
                 ))}
-                <button
-                  onClick={handleEndChat}
-                  disabled={ui.isLoading || messages.length <= 1}
-                  className="px-4 py-2 text-sm bg-white hover:bg-red-50 text-red-600 rounded-full border border-red-200 shadow-sm transition-colors font-semibold whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  이제 대화를 종료하고 싶어요
-                </button>
+                
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 rounded-lg p-3 flex items-center space-x-3">
+                      <Bot className="w-5 h-5 text-indigo-600" />
+                      <div>
+                        <div className="text-sm text-gray-700 mb-1">상담사가 답변을 준비하고 있어요...</div>
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* 입력 영역 */}
+              <div className="border-t border-gray-200 p-4 flex-shrink-0">
+                <div className="flex space-x-2">
+                  <textarea
+                    ref={inputRef}
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="메시지를 입력하세요..."
+                    className="flex-1 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    rows={2}
+                    disabled={isLoading}
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!inputMessage.trim() || isLoading}
+                    className="px-6"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* 대화 종료 버튼 */}
+                <div className="flex justify-end mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEndChat}
+                    disabled={messages.length <= 1 || reportLoading}
+                    className="text-gray-600 hover:text-gray-800"
+                  >
+                    {reportLoading ? '리포트 생성 중...' : '대화 종료'}
+                  </Button>
+                </div>
+
+                {/* 제안 메시지 */}
+                {messages.length <= 1 && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-600 mb-2">빠른 시작:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </Card>
-        </div>
-        {/* 사이드바는 아래에만 표시 */}
-        <div className="block w-full max-w-2xl mx-auto mt-6 space-y-6">
-          {/* 현재 감정 상태 */}
-          {session.currentSession && session.currentSession.emotionHistory.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Sparkles className="w-5 h-5 text-indigo-600" />
-                  <span>현재 감정</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center">
-                  <div className="text-4xl mb-2">
-                    {emotionEmojis[ui.currentEmotion as keyof typeof emotionEmojis] || '😐'}
-                  </div>
-                  <div className="text-lg font-semibold text-gray-900 capitalize">
-                    {ui.currentEmotion}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          </CardContent>
+        </Card>
 
-          {/* 세션 정보 */}
-          {session.currentSession && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Clock className="w-5 h-5 text-indigo-600" />
-                  <span>세션 정보</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">시작 시간:</span>
-                    <span>{session.currentSession.startTime ? <MessageTime timestamp={session.currentSession.startTime} /> : '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">분석 횟수:</span>
-                    <span>{session.currentSession.emotionHistory.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">대화 수:</span>
-                    <span>{session.currentSession.chatHistory.length}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {/* 리포트 모달 */}
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={handleGoHome}
+          report={analysisReport}
+        />
+
+        {/* 분석 로딩 UI */}
+        {reportLoading && <AnalysisLoadingUI />}
       </div>
-
-      {/* 분석 리포트 모달 */}
-      <ReportModal
-        isOpen={showReportModal}
-        onClose={handleGoHome}
-        report={analysisReport}
-      />
-      {/* 분석 리포트 로딩 UI */}
-      {reportLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 flex flex-col items-center shadow-xl">
-            <span className="text-lg font-semibold text-gray-800 mb-4">
-              분석 리포트를 준비하고 있어요…
-            </span>
-            <div className="w-10 h-10 border-4 border-violet-400 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        </div>
-      )}
     </Layout>
   );
 } 

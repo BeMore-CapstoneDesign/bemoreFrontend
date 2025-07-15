@@ -1,22 +1,21 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { 
+  Activity, 
   TrendingUp, 
-  BarChart3, 
-  PieChart as PieChartIcon,
-  Activity,
+  Eye, 
+  Brain, 
+  Heart, 
   Target,
-  Lightbulb,
-  Clock,
-  Calendar,
-  Zap,
-  Heart,
-  Brain,
-  Eye
+  BarChart3,
+  PieChart,
+  Radar
 } from 'lucide-react';
+import { EmotionAnalysis } from '../../types';
+import { emotionEmojis } from '../../utils/emotion';
 import {
   LineChart,
   Line,
@@ -25,27 +24,55 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
+  PieChart as RechartsPieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
-  Radar,
+  Radar as RechartsRadar,
   AreaChart,
   Area
 } from 'recharts';
-import { EmotionAnalysis } from '../../types';
-import { emotionEmojis, emotionColors } from '../../utils/emotion';
+
+// 클라이언트에서만 안전하게 시간 포맷
+function SafeTimeDisplay({ timestamp }: { timestamp: string }) {
+  const [localTime, setLocalTime] = useState('');
+  
+  React.useEffect(() => {
+    setLocalTime(new Date(timestamp).toLocaleTimeString());
+  }, [timestamp]);
+  
+  return <span>{localTime}</span>;
+}
+
+// 클라이언트에서만 안전하게 날짜 포맷
+function SafeDateDisplay({ timestamp }: { timestamp: string }) {
+  const [localDate, setLocalDate] = useState('');
+  
+  React.useEffect(() => {
+    setLocalDate(new Date(timestamp).toLocaleDateString());
+  }, [timestamp]);
+  
+  return <span>{localDate}</span>;
+}
 
 interface AdvancedEmotionDashboardProps {
   emotionHistory: EmotionAnalysis[];
   currentEmotion?: EmotionAnalysis;
   onEmotionSelect?: (emotion: EmotionAnalysis) => void;
 }
+
+const emotionColors: Record<string, string> = {
+  happy: '#10B981',
+  sad: '#3B82F6',
+  angry: '#EF4444',
+  anxious: '#F59E0B',
+  neutral: '#6B7280',
+  excited: '#8B5CF6',
+  calm: '#06B6D4'
+};
 
 export default function AdvancedEmotionDashboard({ 
   emotionHistory, 
@@ -120,8 +147,8 @@ export default function AdvancedEmotionDashboard({
   // 차트 데이터
   const chartData = useMemo(() => {
     return filteredData.map((item, index) => ({
-      time: new Date(item.timestamp).toLocaleTimeString(),
-      date: new Date(item.timestamp).toLocaleDateString(),
+      time: item.timestamp, // 원본 timestamp 저장
+      date: item.timestamp, // 원본 timestamp 저장
       valence: Math.round(item.vadScore.valence * 100),
       arousal: Math.round(item.vadScore.arousal * 100),
       dominance: Math.round(item.vadScore.dominance * 100),
@@ -261,15 +288,16 @@ export default function AdvancedEmotionDashboard({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Zap className={`w-5 h-5 ${
-                emotionStats.trend === 'improving' ? 'text-green-600' :
-                emotionStats.trend === 'declining' ? 'text-red-600' : 'text-gray-600'
-              }`} />
+              <BarChart3 className="w-5 h-5 text-orange-600" />
               <div>
-                <p className="text-sm text-gray-600">감정 트렌드</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {emotionStats.trend === 'improving' ? '↗' : 
-                   emotionStats.trend === 'declining' ? '↘' : '→'}
+                <p className="text-sm text-gray-600">트렌드</p>
+                <p className={`text-2xl font-bold ${
+                  emotionStats.trend === 'improving' ? 'text-green-600' :
+                  emotionStats.trend === 'declining' ? 'text-red-600' :
+                  'text-gray-600'
+                }`}>
+                  {emotionStats.trend === 'improving' ? '개선' :
+                   emotionStats.trend === 'declining' ? '하락' : '안정'}
                 </p>
               </div>
             </div>
@@ -277,183 +305,186 @@ export default function AdvancedEmotionDashboard({
         </Card>
       </div>
 
-      {/* 차트 섹션 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* VAD 점수 변화 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5 text-indigo-600" />
-                <span>VAD 점수 변화</span>
-              </div>
-              <div className="flex space-x-1">
-                {(['line', 'area', 'radar'] as const).map(type => (
-                  <Button
-                    key={type}
-                    variant={selectedChart === type ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedChart(type)}
-                  >
-                    {type === 'line' ? '선' : type === 'area' ? '영역' : '레이더'}
-                  </Button>
-                ))}
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              {selectedChart === 'radar' ? (
+      {/* 차트 선택 */}
+      <div className="flex justify-center space-x-2">
+        {(['line', 'radar', 'area'] as const).map(chartType => (
+          <Button
+            key={chartType}
+            variant={selectedChart === chartType ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setSelectedChart(chartType)}
+          >
+            <React.Fragment>
+              {chartType === 'line' ? <BarChart3 className="w-4 h-4 mr-2" /> :
+               chartType === 'radar' ? <Radar className="w-4 h-4 mr-2" /> :
+               <PieChart className="w-4 h-4 mr-2" />}
+              {chartType === 'line' ? '선형' : chartType === 'radar' ? '레이더' : '영역'}
+            </React.Fragment>
+          </Button>
+        ))}
+      </div>
+
+      {/* 차트 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <BarChart3 className="w-5 h-5 text-indigo-600" />
+            <span>감정 변화 추이</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            {selectedChart === 'line' && (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="index" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="valence" stroke="#10B981" strokeWidth={2} name="긍정성" />
+                  <Line type="monotone" dataKey="arousal" stroke="#3B82F6" strokeWidth={2} name="각성도" />
+                  <Line type="monotone" dataKey="dominance" stroke="#8B5CF6" strokeWidth={2} name="지배성" />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+            
+            {selectedChart === 'radar' && (
+              <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarData}>
                   <PolarGrid />
                   <PolarAngleAxis dataKey="subject" />
                   <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                  <Radar
-                    name="VAD 점수"
-                    dataKey="A"
-                    stroke="#8B5CF6"
-                    fill="#8B5CF6"
-                    fillOpacity={0.3}
-                  />
-                  <Tooltip />
+                  <RechartsRadar name="VAD 점수" dataKey="A" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
                 </RadarChart>
-              ) : selectedChart === 'area' ? (
+              </ResponsiveContainer>
+            )}
+            
+            {selectedChart === 'area' && (
+              <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="time" />
+                  <XAxis dataKey="index" />
                   <YAxis />
                   <Tooltip />
-                  <Area type="monotone" dataKey="valence" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.3} />
-                  <Area type="monotone" dataKey="arousal" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
-                  <Area type="monotone" dataKey="dominance" stackId="1" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.3} />
+                  <Area type="monotone" dataKey="valence" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} name="긍정성" />
+                  <Area type="monotone" dataKey="arousal" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} name="각성도" />
+                  <Area type="monotone" dataKey="dominance" stackId="1" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.6} name="지배성" />
                 </AreaChart>
-              ) : (
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="time" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="valence" stroke="#10B981" name="긍정성" strokeWidth={2} />
-                  <Line type="monotone" dataKey="arousal" stroke="#3B82F6" name="각성도" strokeWidth={2} />
-                  <Line type="monotone" dataKey="dominance" stroke="#8B5CF6" name="지배성" strokeWidth={2} />
-                </LineChart>
-              )}
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* 감정 분포 */}
+      {/* 감정 분포 파이 차트 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <PieChartIcon className="w-5 h-5 text-indigo-600" />
+              <PieChart className="w-5 h-5 text-pink-600" />
               <span>감정 분포</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* CBT 추천 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Brain className="w-5 h-5 text-indigo-600" />
+              <span>CBT 추천</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {cbtRecommendations.length > 0 ? (
+                cbtRecommendations.map((rec, index) => (
+                  <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <rec.icon className={`w-5 h-5 ${rec.color} mt-0.5`} />
+                    <div>
+                      <div className="font-medium text-gray-900">{rec.title}</div>
+                      <div className="text-sm text-gray-600">{rec.description}</div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  <Heart className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>현재 감정 상태가 양호합니다!</p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* CBT 추천 */}
+      {/* 상세 감정 목록 */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Lightbulb className="w-5 h-5 text-yellow-600" />
-            <span>CBT 추천</span>
+            <Activity className="w-5 h-5 text-indigo-600" />
+            <span>상세 감정 기록</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {cbtRecommendations.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {cbtRecommendations.map((rec, index) => (
-                <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <rec.icon className={`w-5 h-5 ${rec.color}`} />
-                    <h3 className="font-semibold text-gray-900">{rec.title}</h3>
+          <div className="space-y-3">
+            {filteredData.slice(-10).reverse().map((emotion, index) => (
+              <div 
+                key={emotion.id} 
+                className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                  currentEmotion?.id === emotion.id ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 hover:bg-gray-100'
+                }`}
+                onClick={() => onEmotionSelect?.(emotion)}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="text-2xl">
+                    {emotionEmojis[emotion.emotion as keyof typeof emotionEmojis] || '😐'}
                   </div>
-                  <p className="text-sm text-gray-600">{rec.description}</p>
+                  <div>
+                    <div className="font-medium text-gray-900 capitalize">
+                      {emotion.emotion}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <SafeTimeDisplay timestamp={emotion.timestamp} />
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Heart className="w-12 h-12 text-green-600 mx-auto mb-4" />
-              <p className="text-gray-600">현재 감정 상태가 양호합니다! 계속해서 긍정적인 마음을 유지하세요.</p>
-            </div>
-          )}
+                <div className="text-right">
+                  <div className="text-sm font-medium text-gray-900">
+                    VAD: {Math.round(emotion.vadScore.valence * 100)}/{Math.round(emotion.vadScore.arousal * 100)}/{Math.round(emotion.vadScore.dominance * 100)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    신뢰도: {Math.round(emotion.confidence * 100)}%
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
-
-      {/* 상세 기록 */}
-      {filteredData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Calendar className="w-5 h-5 text-indigo-600" />
-              <span>상세 기록</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {filteredData.slice().reverse().map((item, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                    currentEmotion?.id === item.id 
-                      ? 'border-indigo-500 bg-indigo-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => onEmotionSelect?.(item)}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="text-2xl">
-                      {emotionEmojis[item.emotion as keyof typeof emotionEmojis] || '😐'}
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900 capitalize">
-                        {item.emotion}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {new Date(item.timestamp).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-gray-900">
-                      신뢰도: {Math.round(item.confidence * 100)}%
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      V: {Math.round(item.vadScore.valence * 100)}% | 
-                      A: {Math.round(item.vadScore.arousal * 100)}% | 
-                      D: {Math.round(item.vadScore.dominance * 100)}%
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 } 
