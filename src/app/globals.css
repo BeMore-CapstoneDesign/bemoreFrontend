@@ -75,96 +75,16 @@ body {
   --emotion-calm: #06B6D4;
 }
 
-/* 감정별 그라데이션 */
-.emotion-happy {
-  background: linear-gradient(135deg, var(--emotion-happy), #059669);
+/* 기본 색상 시스템 */
+.primary-blue {
+  color: #2563EB;
 }
 
-.emotion-sad {
-  background: linear-gradient(135deg, var(--emotion-sad), #2563EB);
+.primary-blue-bg {
+  background-color: #2563EB;
 }
 
-.emotion-angry {
-  background: linear-gradient(135deg, var(--emotion-angry), #DC2626);
-}
-
-.emotion-surprised {
-  background: linear-gradient(135deg, var(--emotion-surprised), #D97706);
-}
-
-.emotion-neutral {
-  background: linear-gradient(135deg, var(--emotion-neutral), #4B5563);
-}
-
-.emotion-excited {
-  background: linear-gradient(135deg, var(--emotion-excited), #7C3AED);
-}
-
-.emotion-calm {
-  background: linear-gradient(135deg, var(--emotion-calm), #0891B2);
-}
-
-/* 인터랙티브 효과 */
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-.glass-effect {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.realtime-indicator {
-  position: relative;
-  overflow: hidden;
-}
-
-.realtime-indicator::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  animation: dataFlow 2s linear infinite;
-}
-
-/* 감정 전환 애니메이션 */
-.emotion-transition {
-  transition: all 0.3s ease-in-out;
-}
-
-/* VAD 바 애니메이션 */
-.vad-bar {
-  transition: width 1s ease-out;
-}
-
-/* 로딩 스피너 */
-.loading-spinner {
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #3498db;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* 채팅 메시지 텍스트 */
-.chat-message-text {
-  line-height: 1.6;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-
-/* 감정별 배경 색상 */
+/* 감정별 배경 색상 - 간소화 */
 .emotion-happy {
   background-color: #f0fdf4;
 }
@@ -193,13 +113,85 @@ body {
   background-color: #ecfeff;
 }
 
-/* 사용자 친화적 UI 개선 */
+/* 기본 UI 컴포넌트 */
 .simple-emotion-display {
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .simple-emotion-display:hover {
-  transform: scale(1.02);
+  transform: translateY(-1px);
+}
+
+/* 인터랙티브 효과 */
+.hover-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 로딩 스피너 */
+.loading-spinner {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #2563EB;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 채팅 메시지 텍스트 */
+.chat-message-text {
+  line-height: 1.6;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* 실시간 감정 표시 애니메이션 */
+@keyframes emotionPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.emotion-pulse {
+  animation: emotionPulse 2s ease-in-out infinite;
+}
+
+/* 권한 요청 상태 표시 */
+.permission-requesting {
+  background: linear-gradient(45deg, #fbbf24, #f59e0b);
+  animation: permissionPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes permissionPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* 실시간 감정 카드 효과 */
+.realtime-emotion-card {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.realtime-emotion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
 .emotion-summary-card {
@@ -420,82 +412,77 @@ body {
 .control-button-group {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 1rem 2rem;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
-  backdrop-filter: blur(15px);
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem;
+  border-radius: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 9999px;
-  transition: all 0.3s ease;
 }
 
 .control-button-group:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.8);
 }
 
-/* 개별 컨트롤 버튼 */
 .control-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
 }
 
 .control-item button {
-  width: 4rem;
-  height: 4rem;
-  border-radius: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
   gap: 0.25rem;
-  transition: all 0.3s ease;
-  font-weight: 500;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .control-item button:hover {
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
 }
 
 .control-item button:active {
-  transform: scale(0.95);
+  transform: translateY(0);
 }
 
-/* 상태별 색상 */
 .control-item button.camera-on,
 .control-item button.mic-on {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.4);
 }
 
 .control-item button.camera-off,
 .control-item button.mic-off {
-  background: linear-gradient(135deg, #6b7280, #4b5563);
-  color: white;
-  box-shadow: 0 4px 15px rgba(107, 114, 128, 0.4);
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .control-item button.start-analysis {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  color: white;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
 }
 
 .control-item button.stop-analysis {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .control-item button.disabled {
-  background: linear-gradient(135deg, #9ca3af, #6b7280);
-  color: white;
+  background: rgba(107, 114, 128, 0.2);
+  border-color: rgba(107, 114, 128, 0.4);
   opacity: 0.5;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 /* 상단 상태바 개선 */
@@ -609,9 +596,11 @@ body {
 /* 접근성 개선 */
 @media (prefers-reduced-motion: reduce) {
   .simple-emotion-display:hover,
-  .emotion-summary-card:hover,
-  .emotion-icon:hover,
-  .video-controls button:hover {
+  .hover-lift:hover {
     transform: none;
+  }
+  
+  .animate-pulse {
+    animation: none;
   }
 }

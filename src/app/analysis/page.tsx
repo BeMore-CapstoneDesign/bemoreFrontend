@@ -132,6 +132,8 @@ function MultimodalAnalysisInterface({
   const [isMicOn, setIsMicOn] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<'requesting' | 'granted' | 'denied' | 'idle'>('idle');
+  const [showPermissionGuide, setShowPermissionGuide] = useState(false);
 
   // 클라이언트 사이드 마운트 확인
   useLayoutEffect(() => {
@@ -157,6 +159,7 @@ function MultimodalAnalysisInterface({
   const startCamera = async () => {
     if (!isMounted) return;
     
+    setPermissionStatus('requesting');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
@@ -169,8 +172,12 @@ function MultimodalAnalysisInterface({
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
+      setPermissionStatus('granted');
+      setShowPermissionGuide(false);
     } catch (error) {
       console.error('카메라 접근 실패:', error);
+      setPermissionStatus('denied');
+      setShowPermissionGuide(true);
     }
   };
 
@@ -200,6 +207,53 @@ function MultimodalAnalysisInterface({
 
   return (
     <div className="space-y-6">
+      {/* 권한 안내 모달 */}
+      {showPermissionGuide && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
+                <Camera className="w-8 h-8 text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">카메라 및 마이크 권한 필요</h3>
+                <p className="text-gray-600 mb-4">
+                  실시간 감정 분석을 위해 카메라와 마이크 접근 권한이 필요합니다.
+                </p>
+                <div className="space-y-2 text-sm text-gray-500">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>브라우저 주소창의 카메라/마이크 아이콘을 클릭하세요</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>"허용"을 선택해주세요</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPermissionGuide(false)}
+                  className="flex-1"
+                >
+                  나중에
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowPermissionGuide(false);
+                    startCamera();
+                  }}
+                  className="flex-1"
+                >
+                  다시 시도
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 메인 비디오 화면 */}
       <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl">
         <div className="relative aspect-video">
@@ -286,8 +340,8 @@ function MultimodalAnalysisInterface({
                     className={`control-button ${isCameraOn ? 'camera-on active' : 'camera-off inactive'}`}
                     title={isCameraOn ? '카메라 끄기' : '카메라 켜기'}
                   >
-                    <Camera className="w-6 h-6" />
-                    <span className="text-xs">{isCameraOn ? '켜짐' : '꺼짐'}</span>
+                    <Camera className="w-4 h-4" />
+                    <span className="text-xs whitespace-nowrap">{isCameraOn ? '켜짐' : '꺼짐'}</span>
                   </Button>
                 </div>
                 
@@ -300,46 +354,21 @@ function MultimodalAnalysisInterface({
                     className={`control-button ${isMicOn ? 'mic-on active' : 'mic-off inactive'}`}
                     title={isMicOn ? '마이크 끄기' : '마이크 켜기'}
                   >
-                    {isMicOn ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
-                    <span className="text-xs">{isMicOn ? '켜짐' : '꺼짐'}</span>
+                    {isMicOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                    <span className="text-xs whitespace-nowrap">{isMicOn ? '켜짐' : '꺼짐'}</span>
                   </Button>
                 </div>
                 
                 {/* 분석 시작/중지 버튼 */}
                 <div className="control-item">
-                  {!isAnalyzing ? (
-                    <Button
-                      onClick={onStartAnalysis}
-                      disabled={!isCameraOn || !isMicOn}
-                      className={`control-button ${!isCameraOn || !isMicOn ? 'disabled' : 'start-analysis'}`}
-                      title={!isCameraOn || !isMicOn ? '카메라와 마이크를 모두 켜주세요' : '감정 분석 시작'}
-                    >
-                      <Play className="w-6 h-6" />
-                      <span className="text-xs">시작</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={onStopAnalysis}
-                      className="control-button stop-analysis"
-                      title="감정 분석 중지"
-                    >
-                      <Square className="w-6 h-6" />
-                      <span className="text-xs">중지</span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-              
-              {/* 상태 안내 텍스트 */}
-              <div className="mt-3 text-center">
-                <div className="status-guide rounded-full px-4 py-2 inline-block">
-                  <span className="text-white text-sm">
-                    {!isCameraOn && !isMicOn && '카메라와 마이크를 켜주세요'}
-                    {isCameraOn && !isMicOn && '마이크를 켜주세요'}
-                    {!isCameraOn && isMicOn && '카메라를 켜주세요'}
-                    {isCameraOn && isMicOn && !isAnalyzing && '분석을 시작할 준비가 되었습니다'}
-                    {isAnalyzing && '감정 분석 중...'}
-                  </span>
+                  <Button
+                    onClick={onStopAnalysis}
+                    className="control-button stop-analysis"
+                    title="상담 종료"
+                  >
+                    <Square className="w-4 h-4" />
+                    <span className="text-xs whitespace-nowrap">종료</span>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -693,6 +722,13 @@ export default function AnalysisPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // 시간 포맷 함수
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+  
   // 세션 관리 상태
   const [sessionState, setSessionState] = useState<SessionState>('not_started');
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
@@ -956,37 +992,32 @@ export default function AnalysisPage() {
     <Layout>
       <div className="space-y-8">
         {/* 헤더 */}
-        <div className="text-center relative">
-          {/* 배경 효과 */}
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-50 via-blue-50 to-green-50 rounded-3xl opacity-50" />
-          
-          <div className="relative z-10 py-8">
-            <div className="flex items-center justify-center space-x-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center animate-pulse">
-                <Brain className="w-6 h-6 text-white" />
-              </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
-                실시간 감정 분석
-              </h1>
+        <div className="text-center py-8">
+          <div className="mb-6">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-600 flex items-center justify-center">
+              <Brain className="w-8 h-8 text-white" />
             </div>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <h1 className="text-3xl font-bold text-gray-900 mb-3">
+              실시간 감정 분석
+            </h1>
+            <p className="text-gray-600 max-w-2xl mx-auto">
               웹캠과 마이크를 통해 실시간으로 표정, 음성, 텍스트를 종합하여 정확한 감정을 분석합니다
             </p>
-            
-            {/* 기능 하이라이트 */}
-            <div className="flex justify-center space-x-8 mt-6">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Eye className="w-4 h-4 text-blue-500" />
-                <span>표정 인식</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Ear className="w-4 h-4 text-green-500" />
-                <span>음성 분석</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <MessageSquare className="w-4 h-4 text-purple-500" />
-                <span>텍스트 변환</span>
-              </div>
+          </div>
+          
+          {/* 기능 하이라이트 */}
+          <div className="flex justify-center space-x-6">
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Eye className="w-4 h-4 text-blue-600" />
+              <span>표정 인식</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Ear className="w-4 h-4 text-blue-600" />
+              <span>음성 분석</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <MessageSquare className="w-4 h-4 text-blue-600" />
+              <span>텍스트 변환</span>
             </div>
           </div>
         </div>
@@ -1012,35 +1043,61 @@ export default function AnalysisPage() {
 
         {/* 상담 세션 관리 */}
         {sessionState === 'not_started' && (
-          <SessionManager
-            sessionState={sessionState}
-            onStartSession={handleStartSession}
-            onEndSession={handleEndSession}
-            sessionDuration={sessionDuration}
-          />
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="text-center space-y-4">
+              <div className="flex items-center justify-center space-x-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+                  <Brain className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">감정 분석 상담</h3>
+                  <p className="text-sm text-gray-500">실시간 멀티모달 감정 분석 세션</p>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <h4 className="font-medium text-blue-900 mb-2">상담 안내</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• 카메라와 마이크를 활성화해주세요</li>
+                  <li>• 편안한 상태에서 자연스럽게 대화하세요</li>
+                  <li>• 상담은 언제든지 종료할 수 있습니다</li>
+                  <li>• 분석 결과는 상담 종료 후 확인할 수 있습니다</li>
+                </ul>
+              </div>
+              <Button
+                onClick={handleStartSession}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                상담 시작하기
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* 상담 진행 중 - 비디오 인터페이스 */}
         {sessionState === 'active' && (
           <div className="space-y-6">
-            <SessionManager
-              sessionState={sessionState}
-              onStartSession={handleStartSession}
-              onEndSession={handleEndSession}
-              sessionDuration={sessionDuration}
-            />
-            
-            <div className="text-center">
-              <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-green-50 to-blue-50 px-4 py-2 rounded-full border border-green-200">
-                <Sparkles className="w-4 h-4 text-green-500" />
-                <h2 className="text-xl font-bold text-gray-900">실시간 멀티모달 분석</h2>
+            {/* 간소화된 상담 상태 표시 */}
+            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-3 h-3 rounded-full bg-blue-600 animate-pulse"></div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">상담 진행 중</h3>
+                    <p className="text-xs text-gray-500">실시간 감정 분석이 진행되고 있습니다</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-semibold text-blue-600">{formatDuration(sessionDuration)}</div>
+                  <div className="text-xs text-gray-500">경과 시간</div>
+                </div>
               </div>
-              <p className="text-gray-600 mt-2">자연스럽게 대화하시면 실시간으로 감정을 분석합니다</p>
             </div>
             
             <MultimodalAnalysisInterface
               onStartAnalysis={() => {}} // 상담 중에는 자동으로 분석 진행
-              onStopAnalysis={() => {}}
+              onStopAnalysis={handleEndSession}
               isAnalyzing={true}
               analysisStep="analyzing_text"
               autoStartMedia={true} // 상담 시작 시 자동으로 미디어 시작
@@ -1051,31 +1108,14 @@ export default function AnalysisPage() {
         {/* 상담 완료 후 분석 중 */}
         {sessionState === 'completed' && analysisState === 'analyzing' && (
           <div className="space-y-6">
-            <SessionManager
-              sessionState={sessionState}
-              onStartSession={handleStartSession}
-              onEndSession={handleEndSession}
-              sessionDuration={sessionDuration}
-            />
-            
-            <div className="text-center">
-              <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2 rounded-full border border-purple-200">
-                <Brain className="w-4 h-4 text-purple-500" />
-                <h2 className="text-xl font-bold text-gray-900">감정 분석 진행 중</h2>
-              </div>
-              <p className="text-gray-600 mt-2">상담 데이터를 분석하여 결과를 생성합니다</p>
-            </div>
-            
-            <div className="flex justify-center">
-              <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center animate-pulse">
-                    <Brain className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">분석 중...</h3>
-                    <p className="text-sm text-gray-600">잠시만 기다려주세요</p>
-                  </div>
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <div className="text-center space-y-4">
+                <div className="w-12 h-12 mx-auto rounded-full bg-blue-600 flex items-center justify-center animate-pulse">
+                  <Brain className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">분석 중...</h3>
+                  <p className="text-sm text-gray-500">상담 데이터를 분석하여 결과를 생성합니다</p>
                 </div>
               </div>
             </div>
