@@ -8,19 +8,11 @@ import {
   Camera, 
   Mic, 
   FileText, 
-  Upload, 
-  X,
-  BarChart3,
-  Lightbulb,
-  Target,
-  ArrowRight,
   Brain,
   Activity,
   CheckCircle,
   Sparkles,
   Zap,
-  Phone,
-  PhoneOff,
   Settings,
   Volume2,
   VolumeX,
@@ -29,151 +21,30 @@ import {
   RotateCcw,
   Play,
   Pause,
-  Square
+  Square,
+  X,
+  BarChart3,
+  Lightbulb,
+  Target,
+  ArrowRight,
+  Eye,
+  Ear,
+  MessageSquare,
+  TrendingUp,
+  AlertCircle,
+  Smile,
+  Frown,
+  Meh
 } from 'lucide-react';
 import { useAppStore } from '../../modules/store';
 import { apiService } from '../../services/api';
 import { EmotionAnalysis } from '../../types';
 import { emotionEmojis, getConfidenceColor } from '../../utils/emotion';
 
-type AnalysisMode = 'video' | 'audio' | 'text' | 'file';
 type AnalysisState = 'idle' | 'analyzing' | 'completed' | 'error';
 
-// 클로바노트 스타일 로딩 컴포넌트
-function ClovaNoteLoadingUI({ onComplete }: { onComplete: () => void }) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [progress, setProgress] = useState(0);
-  
-  useEffect(() => {
-    const steps = [
-      { name: '데이터 수집 중...', duration: 1500 },
-      { name: 'AI 모델 로딩 중...', duration: 2000 },
-      { name: '감정 분석 중...', duration: 2500 },
-      { name: '패턴 인식 중...', duration: 2000 },
-      { name: 'CBT 피드백 생성 중...', duration: 1800 },
-      { name: '결과 정리 중...', duration: 1200 }
-    ];
-
-    let currentIndex = 0;
-    const startTime = Date.now();
-    const totalDuration = steps.reduce((sum, step) => sum + step.duration, 0);
-
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const newProgress = Math.min((elapsed / totalDuration) * 100, 100);
-      setProgress(newProgress);
-
-      if (currentIndex < steps.length) {
-        setCurrentStep(currentIndex);
-        currentIndex++;
-      } else {
-        clearInterval(interval);
-        setTimeout(onComplete, 500);
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [onComplete]);
-
-  const steps = [
-    { name: '데이터 수집 중...', icon: Activity, color: 'text-blue-500' },
-    { name: 'AI 모델 로딩 중...', icon: Brain, color: 'text-purple-500' },
-    { name: '감정 분석 중...', icon: BarChart3, color: 'text-green-500' },
-    { name: '패턴 인식 중...', icon: Sparkles, color: 'text-yellow-500' },
-    { name: 'CBT 피드백 생성 중...', icon: Lightbulb, color: 'text-orange-500' },
-    { name: '결과 정리 중...', icon: CheckCircle, color: 'text-indigo-500' }
-  ];
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
-        {/* 클로바노트 스타일 헤더 */}
-        <div className="text-center mb-8">
-          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center animate-pulse">
-            <Brain className="w-12 h-12 text-white" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">감정 분석 중</h3>
-          <p className="text-gray-600">AI가 당신의 감정을 깊이 있게 분석하고 있습니다</p>
-        </div>
-
-        {/* 진행 단계 */}
-        <div className="space-y-3 mb-8">
-          {steps.map((step, index) => {
-            const StepIcon = step.icon;
-            const isActive = index === currentStep;
-            const isCompleted = index < currentStep;
-            
-            return (
-              <div key={index} className={`flex items-center space-x-3 p-3 rounded-xl transition-all duration-500 ${
-                isActive ? 'bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200' : 
-                isCompleted ? 'bg-green-50 border border-green-200' : 
-                'bg-gray-50 border border-gray-200'
-              }`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  isActive ? 'bg-gradient-to-r from-green-500 to-blue-500 scale-110' : 
-                  isCompleted ? 'bg-green-500' : 
-                  'bg-gray-300'
-                }`}>
-                  {isCompleted ? (
-                    <CheckCircle className="w-6 h-6 text-white" />
-                  ) : (
-                    <StepIcon className={`w-6 h-6 ${isActive ? 'text-white' : 'text-gray-400'}`} />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <span className={`font-medium text-sm ${
-                    isActive ? 'text-green-900' : 
-                    isCompleted ? 'text-green-800' : 
-                    'text-gray-500'
-                  }`}>
-                    {step.name}
-                  </span>
-                  {isActive && (
-                    <div className="mt-1">
-                      <div className="w-full bg-gray-200 rounded-full h-1">
-                        <div className="bg-gradient-to-r from-green-500 to-blue-500 h-1 rounded-full animate-pulse"></div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 진행률 바 */}
-        <div className="mb-6">
-          <div className="flex justify-between text-sm text-gray-600 mb-3">
-            <span>전체 진행률</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div 
-              className="bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300 ease-out relative"
-              style={{ width: `${progress}%` }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* 클로바노트 스타일 팁 */}
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-xl border border-green-200">
-          <div className="flex items-center space-x-2 mb-2">
-            <Sparkles className="w-4 h-4 text-green-600" />
-            <span className="text-sm font-medium text-green-900">분석 팁</span>
-          </div>
-          <p className="text-xs text-green-700">
-            정확한 분석을 위해 자연스러운 표정과 음성을 유지해주세요.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 영상통화 스타일 카메라 인터페이스
-function VideoCallInterface({ 
+// 실시간 멀티모달 분석 인터페이스
+function MultimodalAnalysisInterface({ 
   onStartAnalysis, 
   onStopAnalysis, 
   isAnalyzing 
@@ -187,7 +58,13 @@ function VideoCallInterface({
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  
+  // 실시간 분석 데이터
+  const [facialEmotion, setFacialEmotion] = useState<string>('neutral');
+  const [voiceTone, setVoiceTone] = useState<string>('neutral');
+  const [transcribedText, setTranscribedText] = useState<string>('');
+  const [confidence, setConfidence] = useState<number>(0);
+  const [vadScore, setVadScore] = useState({ valence: 0.5, arousal: 0.5, dominance: 0.5 });
 
   useEffect(() => {
     if (isCameraOn) {
@@ -223,21 +100,6 @@ function VideoCallInterface({
     }
   };
 
-  const captureImage = () => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(video, 0, 0);
-      
-      const imageData = canvas.toDataURL('image/jpeg');
-      setCapturedImage(imageData);
-    }
-  };
-
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       videoRef.current?.requestFullscreen();
@@ -248,127 +110,286 @@ function VideoCallInterface({
     }
   };
 
-  return (
-    <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl">
-      {/* 비디오 화면 */}
-      <div className="relative aspect-video">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-full h-full object-cover"
-        />
+  // 실시간 분석 시뮬레이션
+  useEffect(() => {
+    if (isAnalyzing) {
+      const interval = setInterval(() => {
+        // 표정 분석 시뮬레이션
+        const emotions = ['happy', 'sad', 'angry', 'surprised', 'neutral'];
+        setFacialEmotion(emotions[Math.floor(Math.random() * emotions.length)]);
         
-        {/* 오버레이 UI */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent">
-          {/* 상단 상태바 */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-            <div className="flex items-center space-x-2 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
-              <div className={`w-2 h-2 rounded-full ${isAnalyzing ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-              <span className="text-white text-sm font-medium">
-                {isAnalyzing ? '분석 중...' : '대기 중'}
-              </span>
+        // 음성 톤 분석 시뮬레이션
+        const tones = ['excited', 'calm', 'stressed', 'confident', 'neutral'];
+        setVoiceTone(tones[Math.floor(Math.random() * tones.length)]);
+        
+        // 신뢰도 업데이트
+        setConfidence(Math.random() * 0.3 + 0.7);
+        
+        // VAD 점수 업데이트
+        setVadScore({
+          valence: Math.random(),
+          arousal: Math.random(),
+          dominance: Math.random()
+        });
+        
+        // 텍스트 변환 시뮬레이션
+        const sampleTexts = [
+          "오늘 정말 기분이 좋아요",
+          "조금 스트레스가 있어요",
+          "자신감이 생겼어요",
+          "걱정이 많아요",
+          "평온한 상태예요"
+        ];
+        setTranscribedText(sampleTexts[Math.floor(Math.random() * sampleTexts.length)]);
+      }, 2000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isAnalyzing]);
+
+  const getEmotionIcon = (emotion: string) => {
+    switch (emotion) {
+      case 'happy': return <Smile className="w-6 h-6 text-green-500" />;
+      case 'sad': return <Frown className="w-6 h-6 text-blue-500" />;
+      case 'angry': return <AlertCircle className="w-6 h-6 text-red-500" />;
+      case 'surprised': return <Sparkles className="w-6 h-6 text-yellow-500" />;
+      default: return <Meh className="w-6 h-6 text-gray-500" />;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 메인 비디오 화면 */}
+      <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl">
+        <div className="relative aspect-video">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+          />
+          
+          {/* 실시간 분석 오버레이 */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent">
+            {/* 상단 상태바 */}
+            <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+              <div className="flex items-center space-x-2 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
+                <div className={`w-2 h-2 rounded-full ${isAnalyzing ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                <span className="text-white text-sm font-medium">
+                  {isAnalyzing ? '실시간 분석 중...' : '대기 중'}
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleFullscreen}
+                  className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
+                >
+                  {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleFullscreen}
-                className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
-              >
-                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
-              >
-                <Settings className="w-4 h-4" />
-              </Button>
+
+            {/* 하단 컨트롤 */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+              <div className="flex items-center space-x-4 bg-black/50 backdrop-blur-sm rounded-full px-6 py-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCameraOn(!isCameraOn)}
+                  className={`rounded-full p-3 ${isCameraOn ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}
+                >
+                  {isCameraOn ? <Camera className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsMicOn(!isMicOn)}
+                  className={`rounded-full p-3 ${isMicOn ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}
+                >
+                  {isMicOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                </Button>
+                
+                {!isAnalyzing ? (
+                  <Button
+                    onClick={onStartAnalysis}
+                    disabled={!isCameraOn || !isMicOn}
+                    className="rounded-full p-3 bg-gradient-to-r from-green-500 to-blue-500 text-white hover:from-green-600 hover:to-blue-600"
+                  >
+                    <Play className="w-5 h-5" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={onStopAnalysis}
+                    className="rounded-full p-3 bg-red-500 text-white hover:bg-red-600"
+                  >
+                    <Square className="w-5 h-5" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* 하단 컨트롤 */}
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-            <div className="flex items-center space-x-4 bg-black/50 backdrop-blur-sm rounded-full px-6 py-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsCameraOn(!isCameraOn)}
-                className={`rounded-full p-3 ${isCameraOn ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}
-              >
-                {isCameraOn ? <Camera className="w-5 h-5" /> : <X className="w-5 h-5" />}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsMicOn(!isMicOn)}
-                className={`rounded-full p-3 ${isMicOn ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}
-              >
-                {isMicOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={captureImage}
-                className="rounded-full p-3 bg-blue-500 text-white"
-              >
-                <Camera className="w-5 h-5" />
-              </Button>
-              
-              {!isAnalyzing ? (
-                <Button
-                  onClick={onStartAnalysis}
-                  disabled={!isCameraOn}
-                  className="rounded-full p-3 bg-gradient-to-r from-green-500 to-blue-500 text-white hover:from-green-600 hover:to-blue-600"
-                >
-                  <Play className="w-5 h-5" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={onStopAnalysis}
-                  className="rounded-full p-3 bg-red-500 text-white hover:bg-red-600"
-                >
-                  <Square className="w-5 h-5" />
-                </Button>
-              )}
+          {/* 분석 중 오버레이 */}
+          {isAnalyzing && (
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+              <div className="text-center text-white">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-green-500 to-blue-500 flex items-center justify-center animate-pulse">
+                  <Brain className="w-8 h-8 text-white" />
+                </div>
+                <p className="text-lg font-medium">실시간 멀티모달 분석 중...</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* 분석 중 오버레이 */}
-        {isAnalyzing && (
-          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-            <div className="text-center text-white">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-green-500 to-blue-500 flex items-center justify-center animate-pulse">
-                <Brain className="w-8 h-8 text-white" />
-              </div>
-              <p className="text-lg font-medium">실시간 감정 분석 중...</p>
-            </div>
-          </div>
-        )}
+        <canvas ref={canvasRef} className="hidden" />
       </div>
 
-      {/* 캡처된 이미지 */}
-      {capturedImage && (
-        <div className="absolute top-4 right-4 w-32 h-24 bg-white rounded-lg overflow-hidden shadow-lg">
-          <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCapturedImage(null)}
-            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"
-          >
-            <X className="w-3 h-3" />
-          </Button>
+      {/* 실시간 분석 결과 대시보드 */}
+      {isAnalyzing && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 표정 분석 */}
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <Eye className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-blue-900">표정 분석</h3>
+              </div>
+              <div className="flex items-center space-x-2">
+                {getEmotionIcon(facialEmotion)}
+                <span className="font-medium text-blue-800 capitalize">{facialEmotion}</span>
+              </div>
+              <div className="mt-2">
+                <div className="flex justify-between text-xs text-blue-600 mb-1">
+                  <span>신뢰도</span>
+                  <span>{Math.round(confidence * 100)}%</span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-1">
+                  <div 
+                    className="bg-blue-500 h-1 rounded-full transition-all duration-300" 
+                    style={{ width: `${confidence * 100}%` }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 음성 분석 */}
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <Ear className="w-5 h-5 text-green-600" />
+                <h3 className="font-semibold text-green-900">음성 분석</h3>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Volume2 className="w-5 h-5 text-green-600" />
+                <span className="font-medium text-green-800 capitalize">{voiceTone}</span>
+              </div>
+              <div className="mt-2">
+                <div className="flex justify-between text-xs text-green-600 mb-1">
+                  <span>높낮이</span>
+                  <span>{Math.round(vadScore.arousal * 100)}%</span>
+                </div>
+                <div className="w-full bg-green-200 rounded-full h-1">
+                  <div 
+                    className="bg-green-500 h-1 rounded-full transition-all duration-300" 
+                    style={{ width: `${vadScore.arousal * 100}%` }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 텍스트 변환 */}
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <MessageSquare className="w-5 h-5 text-purple-600" />
+                <h3 className="font-semibold text-purple-900">텍스트 변환</h3>
+              </div>
+              <div className="text-sm text-purple-800 font-medium">
+                "{transcribedText}"
+              </div>
+              <div className="mt-2">
+                <div className="flex justify-between text-xs text-purple-600 mb-1">
+                  <span>긍정성</span>
+                  <span>{Math.round(vadScore.valence * 100)}%</span>
+                </div>
+                <div className="w-full bg-purple-200 rounded-full h-1">
+                  <div 
+                    className="bg-purple-500 h-1 rounded-full transition-all duration-300" 
+                    style={{ width: `${vadScore.valence * 100}%` }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      <canvas ref={canvasRef} className="hidden" />
+      {/* 통합 VAD 점수 */}
+      {isAnalyzing && (
+        <Card className="bg-gradient-to-r from-indigo-50 to-violet-50 border-indigo-200">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <TrendingUp className="w-6 h-6 text-indigo-600" />
+              <h3 className="text-lg font-bold text-indigo-900">통합 감정 분석 (VAD)</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-indigo-700">긍정성 (Valence)</span>
+                  <span className="font-medium text-indigo-900">{Math.round(vadScore.valence * 100)}%</span>
+                </div>
+                <div className="w-full bg-indigo-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${vadScore.valence * 100}%` }}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-indigo-700">각성도 (Arousal)</span>
+                  <span className="font-medium text-indigo-900">{Math.round(vadScore.arousal * 100)}%</span>
+                </div>
+                <div className="w-full bg-indigo-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${vadScore.arousal * 100}%` }}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-indigo-700">지배성 (Dominance)</span>
+                  <span className="font-medium text-indigo-900">{Math.round(vadScore.dominance * 100)}%</span>
+                </div>
+                <div className="w-full bg-indigo-200 rounded-full h-2">
+                  <div 
+                    className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${vadScore.dominance * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -393,8 +414,8 @@ function ResultModal({
               <CheckCircle className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-gray-900">분석 완료</h3>
-              <p className="text-gray-600">AI가 당신의 감정을 분석했습니다</p>
+              <h3 className="text-2xl font-bold text-gray-900">멀티모달 분석 완료</h3>
+              <p className="text-gray-600">표정, 음성, 텍스트를 종합한 감정 분석 결과</p>
             </div>
           </div>
           <Button variant="ghost" onClick={onClose}>
@@ -412,7 +433,7 @@ function ResultModal({
               {result.emotion}
             </h4>
             <p className="text-gray-600">
-              신뢰도: {Math.round(result.confidence * 100)}%
+              통합 신뢰도: {Math.round(result.confidence * 100)}%
             </p>
           </div>
         </div>
@@ -522,7 +543,6 @@ function ResultModal({
 
 export default function AnalysisPage() {
   const { addEmotionAnalysis, setLoading, isLoading } = useAppStore();
-  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('video');
   const [analysisState, setAnalysisState] = useState<AnalysisState>('idle');
   const [analysisResult, setAnalysisResult] = useState<EmotionAnalysis | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -532,34 +552,34 @@ export default function AnalysisPage() {
     setLoading(true);
     
     // 실제 분석 로직은 여기에 구현
-    // 임시로 5초 후 완료 시뮬레이션
+    // 임시로 10초 후 완료 시뮬레이션
     setTimeout(() => {
-             const mockResult: EmotionAnalysis = {
-         id: Date.now().toString(),
-         userId: 'user123',
-         emotion: 'neutral',
-         confidence: 0.85,
-         vadScore: {
-           valence: 0.6,
-           arousal: 0.4,
-           dominance: 0.5
-         },
-         cbtFeedback: {
-           cognitiveDistortion: '이분법적 사고',
-           challenge: '이 상황에서 다른 관점은 무엇일까요?',
-           alternative: '완벽하지 않아도 충분히 좋은 결과입니다.',
-           actionPlan: '작은 성취를 인정하고 자신을 격려해보세요.'
-         },
-         timestamp: new Date().toISOString(),
-         mediaType: 'image'
-       };
+      const mockResult: EmotionAnalysis = {
+        id: Date.now().toString(),
+        userId: 'user123',
+        emotion: 'happy',
+        confidence: 0.92,
+        vadScore: {
+          valence: 0.8,
+          arousal: 0.6,
+          dominance: 0.7
+        },
+        cbtFeedback: {
+          cognitiveDistortion: '과도한 일반화',
+          challenge: '이 상황이 모든 상황에 적용되는 것은 아닙니다. 구체적으로 어떤 부분이 다른가요?',
+          alternative: '이번 경험은 특별한 경우이며, 앞으로 더 나은 결과를 얻을 수 있습니다.',
+          actionPlan: '긍정적인 경험을 기록하고, 작은 성취를 축하하는 습관을 만들어보세요.'
+        },
+        timestamp: new Date().toISOString(),
+        mediaType: 'image'
+      };
       
       setAnalysisResult(mockResult);
       addEmotionAnalysis(mockResult);
       setAnalysisState('completed');
       setLoading(false);
       setShowResult(true);
-    }, 5000);
+    }, 10000);
   };
 
   const handleStopAnalysis = () => {
@@ -573,131 +593,30 @@ export default function AnalysisPage() {
     setAnalysisState('idle');
   };
 
-  const analysisModes = [
-    {
-      mode: 'video' as AnalysisMode,
-      title: '영상 분석',
-      description: '웹캠을 통한 실시간 표정 분석',
-      icon: Camera,
-      color: 'from-blue-500 to-purple-600',
-      featured: true
-    },
-    {
-      mode: 'audio' as AnalysisMode,
-      title: '음성 분석',
-      description: '음성 파일 업로드 또는 녹음',
-      icon: Mic,
-      color: 'from-green-500 to-teal-600'
-    },
-    {
-      mode: 'text' as AnalysisMode,
-      title: '텍스트 분석',
-      description: '감정을 담은 텍스트 입력',
-      icon: FileText,
-      color: 'from-purple-500 to-pink-600'
-    },
-    {
-      mode: 'file' as AnalysisMode,
-      title: '파일 분석',
-      description: '이미지 또는 오디오 파일 업로드',
-      icon: Upload,
-      color: 'from-orange-500 to-red-600'
-    }
-  ];
-
   return (
     <Layout>
       <div className="space-y-8">
         {/* 헤더 */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">감정 분석</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">멀티모달 감정 분석</h1>
           <p className="text-xl text-gray-600">
-            AI 기술로 당신의 감정을 정확하게 분석하고 CBT 피드백을 제공합니다
+            실시간으로 표정, 음성, 텍스트를 종합하여 정확한 감정을 분석합니다
           </p>
         </div>
 
-        {analysisState === 'idle' && (
-          <>
-            {/* 분석 모드 선택 */}
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">분석 방법 선택</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {analysisModes.map((mode) => (
-                  <Card
-                    key={mode.mode}
-                    className={`hover:shadow-xl transition-all duration-300 cursor-pointer group ${
-                      mode.featured ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
-                    }`}
-                    onClick={() => setAnalysisMode(mode.mode)}
-                  >
-                    <CardContent className="text-center p-8">
-                      <div className={`w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-r ${mode.color} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
-                        <mode.icon className="w-10 h-10 text-white" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                        {mode.title}
-                        {mode.featured && (
-                          <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                            추천
-                          </span>
-                        )}
-                      </h3>
-                      <p className="text-gray-600 text-lg">
-                        {mode.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* 영상 분석 인터페이스 */}
-            {analysisMode === 'video' && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">실시간 영상 분석</h2>
-                  <p className="text-gray-600">웹캠을 활성화하고 분석을 시작해보세요</p>
-                </div>
-                
-                                 <VideoCallInterface
-                   onStartAnalysis={handleStartAnalysis}
-                   onStopAnalysis={handleStopAnalysis}
-                   isAnalyzing={analysisState === 'analyzing' || isLoading}
-                 />
-              </div>
-            )}
-
-            {/* 다른 분석 모드들 */}
-            {analysisMode !== 'video' && (
-              <div className="text-center py-12">
-                                 <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
-                   {(() => {
-                     const mode = analysisModes.find(m => m.mode === analysisMode);
-                     const Icon = mode?.icon;
-                     return Icon ? <Icon className="w-12 h-12 text-gray-400" /> : null;
-                   })()}
-                 </div>
-                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                   {analysisModes.find(m => m.mode === analysisMode)?.title || '분석'}
-                 </h3>
-                 <p className="text-gray-600 mb-6">
-                   {analysisModes.find(m => m.mode === analysisMode)?.description || '분석을 시작합니다'}
-                 </p>
-                <Button
-                  onClick={handleStartAnalysis}
-                  className="bg-gradient-to-r from-green-500 to-blue-500 text-white hover:from-green-600 hover:to-blue-600"
-                >
-                  분석 시작하기
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* 클로바노트 스타일 로딩 */}
-        {analysisState === 'analyzing' && (
-          <ClovaNoteLoadingUI onComplete={() => setAnalysisState('completed')} />
-        )}
+        {/* 분석 인터페이스 */}
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">실시간 멀티모달 분석</h2>
+            <p className="text-gray-600">웹캠과 마이크를 활성화하고 분석을 시작해보세요</p>
+          </div>
+          
+          <MultimodalAnalysisInterface
+            onStartAnalysis={handleStartAnalysis}
+            onStopAnalysis={handleStopAnalysis}
+            isAnalyzing={analysisState === 'analyzing' || isLoading}
+          />
+        </div>
 
         {/* 결과 모달 */}
         {showResult && analysisResult && (
