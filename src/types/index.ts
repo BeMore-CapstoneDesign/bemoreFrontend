@@ -75,6 +75,13 @@ export interface ApiResponse<T> {
   timestamp?: string;
 }
 
+// VAD 점수 타입
+export interface VADScore {
+  valence: number; // 긍정성 (0-1)
+  arousal: number; // 각성도 (0-1)
+  dominance: number; // 지배성 (0-1)
+}
+
 // 감정 상태 타입
 export type EmotionState = 'happy' | 'sad' | 'angry' | 'anxious' | 'neutral' | 'excited' | 'calm';
 

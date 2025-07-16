@@ -17,14 +17,16 @@ import {
   Brain,
   Activity,
   CheckCircle,
-  Sparkles
+  Sparkles,
+  Zap
 } from 'lucide-react';
+import MultimodalAnalysisDashboard from '../../components/analysis/MultimodalAnalysisDashboard';
 import { useAppStore } from '../../modules/store';
 import { apiService } from '../../services/api';
 import { EmotionAnalysis } from '../../types';
 import { emotionEmojis, getConfidenceColor } from '../../utils/emotion';
 
-type MediaType = 'image' | 'audio' | 'text';
+type MediaType = 'image' | 'audio' | 'text' | 'multimodal';
 
 // 고도화된 로딩 컴포넌트
 function AnalysisLoadingUI({ mediaType }: { mediaType: MediaType }) {
@@ -63,7 +65,8 @@ function AnalysisLoadingUI({ mediaType }: { mediaType: MediaType }) {
   const mediaTypeInfo = {
     image: { title: '표정 분석', icon: Camera, color: 'from-blue-500 to-blue-600' },
     audio: { title: '음성 분석', icon: Mic, color: 'from-green-500 to-green-600' },
-    text: { title: '텍스트 분석', icon: FileText, color: 'from-purple-500 to-purple-600' }
+    text: { title: '텍스트 분석', icon: FileText, color: 'from-purple-500 to-purple-600' },
+    multimodal: { title: '멀티모달 분석', icon: Zap, color: 'from-indigo-500 to-violet-600' }
   };
 
   const info = mediaTypeInfo[mediaType];
@@ -188,6 +191,13 @@ export default function AnalysisPage() {
       icon: FileText,
       color: 'from-purple-500 to-purple-600',
     },
+    {
+      type: 'multimodal' as MediaType,
+      title: '멀티모달 분석',
+      description: '실시간 표정, 음성, 텍스트 통합 분석',
+      icon: Zap,
+      color: 'from-indigo-500 to-violet-600',
+    },
   ];
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,9 +275,16 @@ export default function AnalysisPage() {
   const handleAnalyze = async () => {
     if (!selectedType) return;
     
+    if (selectedType === 'multimodal') {
+      // 멀티모달 분석은 별도 컴포넌트에서 처리
+      return;
+    }
+    
     setLoading(true);
     try {
-      const analysisData: { mediaType: MediaType; file?: File; textContent?: string } = { mediaType: selectedType };
+      const analysisData: { mediaType: 'image' | 'audio' | 'text'; file?: File; textContent?: string } = { 
+        mediaType: selectedType as 'image' | 'audio' | 'text' 
+      };
       
       if (selectedType === 'text') {
         analysisData.textContent = textContent;
@@ -417,6 +434,32 @@ export default function AnalysisPage() {
                   </div>
                 )}
 
+                {selectedType === 'multimodal' && (
+                  <div className="space-y-4">
+                    <div className="text-center p-8 bg-gradient-to-br from-indigo-50 to-violet-50 rounded-lg">
+                      <Zap className="w-16 h-16 mx-auto mb-4 text-indigo-600" />
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">실시간 멀티모달 분석</h3>
+                      <p className="text-gray-600 mb-4">
+                        웹캠과 마이크를 사용하여 실시간으로 표정과 음성을 분석합니다.
+                      </p>
+                      <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Camera className="w-4 h-4" />
+                          <span>표정 분석</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Mic className="w-4 h-4" />
+                          <span>음성 분석</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Brain className="w-4 h-4" />
+                          <span>통합 분석</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -425,25 +468,40 @@ export default function AnalysisPage() {
                   className="hidden"
                 />
 
-                <div className="mt-6">
-                  <Button
-                    onClick={handleAnalyze}
-                    loading={isLoading}
-                    disabled={!file && !textContent}
-                    size="lg"
-                    className="w-full"
-                  >
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    감정 분석 시작
-                  </Button>
-                </div>
+                {selectedType !== 'multimodal' && (
+                  <div className="mt-6">
+                    <Button
+                      onClick={handleAnalyze}
+                      loading={isLoading}
+                      disabled={!file && !textContent}
+                      size="lg"
+                      className="w-full"
+                    >
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      감정 분석 시작
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         )}
 
+        {/* 멀티모달 분석 대시보드 */}
+        {selectedType === 'multimodal' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900">실시간 멀티모달 분석</h2>
+            <MultimodalAnalysisDashboard
+              onIntegratedEmotionChange={(vadScore, confidence) => {
+                // 통합 감정 변화 처리
+                console.log('통합 감정 변화:', vadScore, confidence);
+              }}
+            />
+          </div>
+        )}
+
         {/* 분석 결과 */}
-        {analysisResult && (
+        {analysisResult && selectedType !== 'multimodal' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900">분석 결과</h2>
             

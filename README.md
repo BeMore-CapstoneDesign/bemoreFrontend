@@ -43,6 +43,9 @@ BeMore는 **NestJS 백엔드 + Next.js 프론트엔드** 기반으로 멀티모�
 ### 🤖 **AI 채팅 & 감정 분석**
 - **Gemini API 기반 AI 상담사**
 - **멀티모달 감정 분석** (텍스트, 음성, 이미지)
+- **실시간 표정 분석** (MediaPipe Face Landmarker)
+- **실시간 음성 분석** (Web Audio API)
+- **통합 멀티모달 분석** (신뢰도 가중치 적용)
 - **실시간 CBT 피드백** 및 맞춤형 대화
 - **감정 변화 추적** 및 세션 히스토리
 
@@ -55,6 +58,8 @@ BeMore는 **NestJS 백엔드 + Next.js 프론트엔드** 기반으로 멀티모�
 ### 🎨 **현대적 UI/UX**
 - **반응형 디자인** (모바일/데스크톱)
 - **직관적 인터페이스** 및 접근성
+- **실시간 멀티모달 대시보드**
+- **VAD 기반 감정 시각화**
 - **로딩 애니메이션** 및 사용자 피드백
 - **다크/라이트 모드** 지원
 
@@ -131,16 +136,21 @@ cd bemoreFrontend
 # 의존성 설치
 npm install
 
+# MediaPipe 라이브러리 설치 (자동 설치됨)
+npm install @mediapipe/face_mesh @mediapipe/camera_utils @mediapipe/drawing_utils
+
 # 개발 서버 실행
 npm run dev
 ```
 
 ### 4. **접속 확인**
-- **프론트엔드**: http://localhost:3001
+- **프론트엔드**: http://localhost:3005
 - **백엔드 API**: http://localhost:3000/api
 - **API 문서**: http://localhost:3000/api/docs
 
 ### 5. **기능 테스트**
+
+#### **기본 API 테스트**
 ```bash
 # 백엔드 API 테스트
 curl -X POST http://localhost:3000/api/chat/gemini \
@@ -160,6 +170,13 @@ curl -X POST http://localhost:3000/api/chat/gemini \
   }
 }
 ```
+
+#### **멀티모달 분석 테스트**
+1. **프론트엔드 접속**: http://localhost:3005
+2. **분석 페이지 이동**: `/analysis`
+3. **멀티모달 분석 선택**: "멀티모달 분석" 카드 클릭
+4. **권한 허용**: 웹캠 및 마이크 접근 권한 허용
+5. **실시간 분석 확인**: 표정 및 음성 분석 결과 확인
 
 ---
 
