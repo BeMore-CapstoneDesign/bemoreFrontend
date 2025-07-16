@@ -203,10 +203,43 @@ export default function AnalysisPage() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      setFile(selectedFile);
-      if (selectedType === 'image') {
-        const url = URL.createObjectURL(selectedFile);
-        setPreviewUrl(url);
+      // 파일 유효성 검사
+      try {
+        if (selectedType === 'image') {
+          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+          const maxSize = 5 * 1024 * 1024; // 5MB
+          
+          if (!allowedTypes.includes(selectedFile.type)) {
+            alert('지원하지 않는 이미지 형식입니다. (JPG, PNG, GIF만 지원)');
+            return;
+          }
+          
+          if (selectedFile.size > maxSize) {
+            alert('이미지 파일 크기가 너무 큽니다. (최대 5MB)');
+            return;
+          }
+          
+          const url = URL.createObjectURL(selectedFile);
+          setPreviewUrl(url);
+        } else if (selectedType === 'audio') {
+          const allowedTypes = ['audio/wav', 'audio/mp3', 'audio/m4a', 'audio/ogg'];
+          const maxSize = 10 * 1024 * 1024; // 10MB
+          
+          if (!allowedTypes.includes(selectedFile.type)) {
+            alert('지원하지 않는 오디오 형식입니다. (WAV, MP3, M4A, OGG만 지원)');
+            return;
+          }
+          
+          if (selectedFile.size > maxSize) {
+            alert('오디오 파일 크기가 너무 큽니다. (최대 10MB)');
+            return;
+          }
+        }
+        
+        setFile(selectedFile);
+      } catch (error) {
+        console.error('파일 검증 오류:', error);
+        alert('파일 검증 중 오류가 발생했습니다.');
       }
     }
   };
@@ -282,17 +315,27 @@ export default function AnalysisPage() {
     
     setLoading(true);
     try {
-      const analysisData: { mediaType: 'image' | 'audio' | 'text'; file?: File; textContent?: string } = { 
-        mediaType: selectedType as 'image' | 'audio' | 'text' 
-      };
+      let result: EmotionAnalysis;
       
       if (selectedType === 'text') {
-        analysisData.textContent = textContent;
-      } else if (file) {
-        analysisData.file = file;
+        // 텍스트 분석
+        result = await apiService.analyzeMultimodalEmotion({
+          text: textContent,
+        });
+      } else if (selectedType === 'image' && file) {
+        // 이미지 분석
+        result = await apiService.analyzeFacialEmotion({
+          imageFile: file,
+        });
+      } else if (selectedType === 'audio' && file) {
+        // 음성 분석
+        result = await apiService.analyzeVoiceEmotion({
+          audioFile: file,
+        });
+      } else {
+        throw new Error('분석할 데이터가 없습니다.');
       }
       
-      const result = await apiService.analyzeEmotion(analysisData);
       setAnalysisResult(result);
       addEmotionAnalysis(result);
     } catch (error) {
