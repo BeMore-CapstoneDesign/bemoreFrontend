@@ -85,6 +85,30 @@ class ApiService {
     return response.data.data!;
   }
 
+  // 텍스트 전용 감정 분석 (새로운 API)
+  async analyzeTextEmotion(data: {
+    text: string;
+    sessionId?: string;
+  }): Promise<any> {
+    const response: AxiosResponse<ApiResponse<any>> = await this.api.post(
+      '/emotion/analyze/text',
+      {
+        text: data.text,
+        sessionId: data.sessionId
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
+    if (!response.data.success) {
+      throw new Error(response.data.error || '텍스트 감정 분석에 실패했습니다.');
+    }
+    return response.data.data!;
+  }
+
   // 멀티모달 감정 분석
   async analyzeMultimodalEmotion(data: {
     text?: string;
@@ -92,6 +116,41 @@ class ApiService {
     imageFile?: File;
     sessionId?: string;
   }): Promise<EmotionAnalysis> {
+    // 텍스트가 있으면 새로운 텍스트 분석 API 우선 사용
+    if (data.text && !data.audioFile && !data.imageFile) {
+      try {
+        const textResult = await this.analyzeTextEmotion({
+          text: data.text,
+          sessionId: data.sessionId
+        });
+        
+        // 텍스트 분석 결과를 EmotionAnalysis 형식으로 변환
+        return {
+          id: Date.now().toString(),
+          userId: 'user123',
+          emotion: textResult.primaryEmotion || 'neutral',
+          confidence: textResult.confidence || 0.5,
+          vadScore: {
+            valence: textResult.vadScore?.valence || 0.5,
+            arousal: textResult.vadScore?.arousal || 0.5,
+            dominance: textResult.vadScore?.dominance || 0.5
+          },
+          cbtFeedback: {
+            cognitiveDistortion: '과도한 일반화',
+            challenge: '이 상황이 모든 상황에 적용되는 것은 아닙니다. 구체적으로 어떤 부분이 다른가요?',
+            alternative: '이번 경험은 특별한 경우이며, 앞으로 더 나은 결과를 얻을 수 있습니다.',
+            actionPlan: '긍정적인 경험을 기록하고, 작은 성취를 축하하는 습관을 만들어보세요.'
+          },
+          timestamp: new Date().toISOString(),
+          mediaType: 'text',
+          textContent: data.text
+        };
+      } catch (error) {
+        console.warn('텍스트 분석 API 실패, 기존 멀티모달 API 사용:', error);
+      }
+    }
+    
+    // 기존 멀티모달 API 사용 (파일이 있거나 텍스트 분석이 실패한 경우)
     const formData = new FormData();
     if (data.text) formData.append('text', data.text);
     if (data.audioFile) formData.append('audio', data.audioFile);

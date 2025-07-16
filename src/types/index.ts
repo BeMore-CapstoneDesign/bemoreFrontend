@@ -10,7 +10,7 @@ export interface EmotionAnalysis {
   };
   emotion: string; // 주요 감정 (기쁨, 슬픔, 분노, 불안 등)
   confidence: number; // 분석 신뢰도 (0-1)
-  mediaType: 'image' | 'audio' | 'text';
+  mediaType: 'image' | 'audio' | 'text' | 'realtime';
   mediaUrl?: string;
   textContent?: string;
   cbtFeedback: CBTFeedback;
