@@ -62,6 +62,197 @@ body {
   animation: fadeIn 0.3s ease-out;
 }
 
+/* 감정 분석 특화 애니메이션 */
+@keyframes emotionPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes emotionWave {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes emotionGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+@keyframes dataFlow {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes breathing {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+}
+
+/* 감정별 애니메이션 클래스 */
+.emotion-pulse {
+  animation: emotionPulse 2s ease-in-out infinite;
+}
+
+.emotion-wave {
+  animation: emotionWave 3s ease-out infinite;
+}
+
+.emotion-glow {
+  animation: emotionGlow 2s ease-in-out infinite;
+}
+
+.data-flow {
+  animation: dataFlow 3s linear infinite;
+}
+
+.breathing {
+  animation: breathing 4s ease-in-out infinite;
+}
+
+.sparkle {
+  animation: sparkle 1.5s ease-in-out infinite;
+}
+
+/* 감정별 색상 변수 */
+:root {
+  --emotion-happy: #10B981;
+  --emotion-sad: #3B82F6;
+  --emotion-angry: #EF4444;
+  --emotion-surprised: #F59E0B;
+  --emotion-neutral: #6B7280;
+  --emotion-excited: #8B5CF6;
+  --emotion-calm: #06B6D4;
+}
+
+/* 감정별 그라데이션 */
+.emotion-happy {
+  background: linear-gradient(135deg, var(--emotion-happy), #059669);
+}
+
+.emotion-sad {
+  background: linear-gradient(135deg, var(--emotion-sad), #2563EB);
+}
+
+.emotion-angry {
+  background: linear-gradient(135deg, var(--emotion-angry), #DC2626);
+}
+
+.emotion-surprised {
+  background: linear-gradient(135deg, var(--emotion-surprised), #D97706);
+}
+
+.emotion-neutral {
+  background: linear-gradient(135deg, var(--emotion-neutral), #4B5563);
+}
+
+.emotion-excited {
+  background: linear-gradient(135deg, var(--emotion-excited), #7C3AED);
+}
+
+.emotion-calm {
+  background: linear-gradient(135deg, var(--emotion-calm), #0891B2);
+}
+
+/* 인터랙티브 효과 */
+.hover-lift {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 실시간 분석 효과 */
+.realtime-indicator {
+  position: relative;
+}
+
+.realtime-indicator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+  animation: dataFlow 2s linear infinite;
+}
+
+/* 감정 변화 트랜지션 */
+.emotion-transition {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* VAD 차트 애니메이션 */
+.vad-bar {
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 로딩 스피너 */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 채팅 메시지 텍스트 줄바꿈 */
 .chat-message-text {
   word-wrap: break-word;
