@@ -200,32 +200,52 @@ function ReportModal({ isOpen, onClose, report }: ReportModalProps) {
 // 분석 로딩 UI 컴포넌트
 function AnalysisLoadingUI() {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+      <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border-2 border-indigo-200 rounded-lg p-8 max-w-lg w-full mx-4 shadow-2xl">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-6 relative">
-            <div className="w-full h-full border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          {/* 클래식 스피너 */}
+          <div className="w-20 h-20 mx-auto mb-8 relative">
+            <div className="w-full h-full border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin"></div>
+            <div className="absolute inset-2 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Bot className="w-8 h-8 text-indigo-600" />
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-full flex items-center justify-center">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
             </div>
           </div>
           
-          <h3 className="text-xl font-bold text-gray-900 mb-2">대화 분석 중</h3>
-          <p className="text-gray-600 mb-6">AI가 대화 내용을 분석하고 맞춤형 리포트를 생성하고 있어요</p>
+          {/* 클래식 타이틀 */}
+          <div className="mb-6">
+            <h3 className="text-2xl font-serif font-bold text-indigo-800 mb-2 tracking-wide">대화 분석 중</h3>
+            <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-indigo-600 to-transparent mx-auto"></div>
+          </div>
           
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></div>
-              <span className="text-sm text-gray-700">감정 변화 패턴 분석</span>
+          <p className="text-indigo-700 mb-8 font-medium leading-relaxed">
+            AI가 대화 내용을 분석하고<br />
+            맞춤형 리포트를 생성하고 있어요
+          </p>
+          
+          {/* 클래식 진행 단계 */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-center space-x-4">
+              <div className="w-3 h-3 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-full animate-pulse shadow-md"></div>
+              <span className="text-sm font-medium text-indigo-800 tracking-wide">감정 변화 패턴 분석</span>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-              <span className="text-sm text-gray-700">주요 인사이트 추출</span>
+            <div className="flex items-center justify-center space-x-4">
+              <div className="w-3 h-3 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-full animate-pulse shadow-md" style={{ animationDelay: '0.7s' }}></div>
+              <span className="text-sm font-medium text-indigo-800 tracking-wide">주요 인사이트 추출</span>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-              <span className="text-sm text-gray-700">CBT 기법 추천</span>
+            <div className="flex items-center justify-center space-x-4">
+              <div className="w-3 h-3 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-full animate-pulse shadow-md" style={{ animationDelay: '1.4s' }}></div>
+              <span className="text-sm font-medium text-indigo-800 tracking-wide">CBT 기법 추천</span>
             </div>
+          </div>
+          
+          {/* 클래식 장식 요소 */}
+          <div className="mt-8 flex justify-center space-x-2">
+            <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce"></div>
+            <div className="w-1 h-1 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-1 h-1 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
           </div>
         </div>
       </div>
@@ -427,10 +447,22 @@ export default function ChatPage() {
     setLoading(true);
     
     try {
-      // 실제 분석 시간을 시뮬레이션하기 위해 약간의 지연 추가
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 로딩 시작 시간 기록
+      const startTime = Date.now();
+      const minLoadingTime = 5000; // 최소 5초
       
+      // 실제 분석 수행
       const report = await generateAnalysisReport();
+      
+      // 실제 분석에 걸린 시간 계산
+      const actualTime = Date.now() - startTime;
+      
+      // 최소 로딩 시간 보장 (5초)
+      if (actualTime < minLoadingTime) {
+        const remainingTime = minLoadingTime - actualTime;
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+      
       setAnalysisReport(report);
       setShowReportModal(true);
       endSession();
@@ -517,7 +549,7 @@ export default function ChatPage() {
         <div className="text-center">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">AI 감정 상담</h1>
           <p className="text-sm md:text-base text-gray-600">
-            Gemini AI와 대화하며 감정을 탐색하고 CBT 피드백을 받아보세요
+            BeMore AI와 대화하며 감정을 탐색하고 CBT 피드백을 받아보세요
           </p>
         </div>
 
