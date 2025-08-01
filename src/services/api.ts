@@ -1,5 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { EmotionAnalysis, ChatMessage, ApiResponse } from '../types';
+import { emotionRepository } from './repositories/emotionRepository';
+import { chatRepository } from './repositories/chatRepository';
+import { EmotionAnalysis, ChatMessage, ApiResponse, UserProfile } from '../types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -16,17 +18,14 @@ class ApiService {
     });
   }
 
-  // AI 채팅 (Gemini)
-  async sendChatMessage(message: string, sessionId?: string, emotionContext?: any): Promise<ChatMessage> {
-    const response: AxiosResponse<ApiResponse<ChatMessage>> = await this.api.post('/chat/gemini', {
-      message,
-      sessionId,
-      emotionContext,
-    });
-    if (!response.data.success) {
-      throw new Error(response.data.error || '채팅 메시지 전송에 실패했습니다.');
-    }
-    return response.data.data!;
+  // ===== 감정 분석 관련 (EmotionRepository 위임) =====
+  
+  // 텍스트 감정 분석
+  async analyzeTextEmotion(data: {
+    text: string;
+    sessionId?: string;
+  }): Promise<EmotionAnalysis> {
+    return emotionRepository.analyzeTextEmotion(data);
   }
 
   // 음성 감정 분석
@@ -34,27 +33,7 @@ class ApiService {
     audioFile: File;
     sessionId?: string;
   }): Promise<EmotionAnalysis> {
-    // 파일 유효성 검사
-    this.validateAudioFile(data.audioFile);
-    
-    const formData = new FormData();
-    formData.append('audio', data.audioFile);
-    if (data.sessionId) formData.append('sessionId', data.sessionId);
-    
-    const response: AxiosResponse<ApiResponse<EmotionAnalysis>> = await this.api.post(
-      '/emotion/analyze/voice',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        timeout: 60000, // 음성 분석은 시간이 오래 걸릴 수 있음
-      }
-    );
-    if (!response.data.success) {
-      throw new Error(response.data.error || '음성 감정 분석에 실패했습니다.');
-    }
-    return response.data.data!;
+    return emotionRepository.analyzeVoiceEmotion(data);
   }
 
   // 얼굴 표정 분석
@@ -62,51 +41,7 @@ class ApiService {
     imageFile: File;
     sessionId?: string;
   }): Promise<EmotionAnalysis> {
-    // 파일 유효성 검사
-    this.validateImageFile(data.imageFile);
-    
-    const formData = new FormData();
-    formData.append('image', data.imageFile);
-    if (data.sessionId) formData.append('sessionId', data.sessionId);
-    
-    const response: AxiosResponse<ApiResponse<EmotionAnalysis>> = await this.api.post(
-      '/emotion/analyze/facial',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        timeout: 30000, // 이미지 분석은 상대적으로 빠름
-      }
-    );
-    if (!response.data.success) {
-      throw new Error(response.data.error || '얼굴 표정 분석에 실패했습니다.');
-    }
-    return response.data.data!;
-  }
-
-  // 텍스트 전용 감정 분석 (새로운 API)
-  async analyzeTextEmotion(data: {
-    text: string;
-    sessionId?: string;
-  }): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.post(
-      '/emotion/analyze/text',
-      {
-        text: data.text,
-        sessionId: data.sessionId
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 10000,
-      }
-    );
-    if (!response.data.success) {
-      throw new Error(response.data.error || '텍스트 감정 분석에 실패했습니다.');
-    }
-    return response.data.data!;
+    return emotionRepository.analyzeFacialEmotion(data);
   }
 
   // 멀티모달 감정 분석
@@ -116,196 +51,92 @@ class ApiService {
     imageFile?: File;
     sessionId?: string;
   }): Promise<EmotionAnalysis> {
-    // 텍스트가 있으면 새로운 텍스트 분석 API 우선 사용
-    if (data.text && !data.audioFile && !data.imageFile) {
-      try {
-        const textResult = await this.analyzeTextEmotion({
-          text: data.text,
-          sessionId: data.sessionId
-        });
-        
-        // 텍스트 분석 결과를 EmotionAnalysis 형식으로 변환
-        return {
-          id: Date.now().toString(),
-          userId: 'user123',
-          emotion: textResult.primaryEmotion || 'neutral',
-          confidence: textResult.confidence || 0.5,
-          vadScore: {
-            valence: textResult.vadScore?.valence || 0.5,
-            arousal: textResult.vadScore?.arousal || 0.5,
-            dominance: textResult.vadScore?.dominance || 0.5
-          },
-          cbtFeedback: {
-            cognitiveDistortion: '과도한 일반화',
-            challenge: '이 상황이 모든 상황에 적용되는 것은 아닙니다. 구체적으로 어떤 부분이 다른가요?',
-            alternative: '이번 경험은 특별한 경우이며, 앞으로 더 나은 결과를 얻을 수 있습니다.',
-            actionPlan: '긍정적인 경험을 기록하고, 작은 성취를 축하하는 습관을 만들어보세요.'
-          },
-          timestamp: new Date().toISOString(),
-          mediaType: 'text',
-          textContent: data.text
-        };
-      } catch (error) {
-        console.warn('텍스트 분석 API 실패, 기존 멀티모달 API 사용:', error);
-      }
-    }
-    
-    // 기존 멀티모달 API 사용 (파일이 있거나 텍스트 분석이 실패한 경우)
-    const formData = new FormData();
-    if (data.text) formData.append('text', data.text);
-    if (data.audioFile) formData.append('audio', data.audioFile);
-    if (data.imageFile) formData.append('image', data.imageFile);
-    if (data.sessionId) formData.append('sessionId', data.sessionId);
-    
-    const response: AxiosResponse<ApiResponse<EmotionAnalysis>> = await this.api.post(
-      '/emotion/analyze/multimodal',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
-    if (!response.data.success) {
-      throw new Error(response.data.error || '멀티모달 감정 분석에 실패했습니다.');
-    }
-    return response.data.data!;
+    return emotionRepository.analyzeMultimodalEmotion(data);
   }
 
-  // 기존 analyzeEmotion 메서드 (하위 호환성 유지)
-  async analyzeEmotion(data: {
-    mediaType: 'text' | 'audio' | 'image';
-    text?: string;
-    audioFile?: File;
-    imageFile?: File;
-    sessionId?: string;
-  }): Promise<EmotionAnalysis> {
-    // mediaType에 따라 적절한 엔드포인트 호출
-    if (data.mediaType === 'audio') {
-      return this.analyzeVoiceEmotion({
-        audioFile: data.audioFile!,
-        sessionId: data.sessionId
-      });
-    } else {
-      // text, image는 멀티모달로 처리
-      return this.analyzeMultimodalEmotion({
-        text: data.text,
-        imageFile: data.imageFile,
-        sessionId: data.sessionId
-      });
-    }
-  }
-
-  // 세션 히스토리 조회
-  async getSessionHistory(userId: string): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.get(`/history/${userId}`);
-    if (!response.data.success) {
-      throw new Error(response.data.error || '세션 히스토리 조회에 실패했습니다.');
-    }
-    return response.data.data!;
-  }
-
-  // PDF 리포트 생성
-  async generateSessionReport(sessionId: string): Promise<Blob> {
-    const response: AxiosResponse<Blob> = await this.api.post(
-      `/history/session/${sessionId}/pdf`,
-      {},
-      { responseType: 'blob' }
-    );
-    return response.data;
-  }
-
-  // 채팅 컨텍스트 조회
-  async getChatContext(sessionId: string): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.get(`/chat/context/${sessionId}`);
-    if (!response.data.success) {
-      throw new Error(response.data.error || '채팅 컨텍스트 조회에 실패했습니다.');
-    }
-    return response.data.data!;
-  }
-
-  // 채팅 히스토리 조회
-  async getChatHistory(sessionId: string): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.get(`/chat/history/${sessionId}`);
-    if (!response.data.success) {
-      throw new Error(response.data.error || '채팅 히스토리 조회에 실패했습니다.');
-    }
-    return response.data.data!;
+  // 감정 히스토리 조회
+  async getEmotionHistory(sessionId: string): Promise<EmotionAnalysis[]> {
+    return emotionRepository.getEmotionHistory(sessionId);
   }
 
   // 감정 패턴 분석
   async getEmotionPatterns(sessionId: string): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.get(`/emotion/patterns/${sessionId}`);
-    if (!response.data.success) {
-      throw new Error(response.data.error || '감정 패턴 분석에 실패했습니다.');
-    }
-    return response.data.data!;
-  }
-
-  // 감정 분석 히스토리
-  async getEmotionHistory(sessionId: string): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.get(`/emotion/history/${sessionId}`);
-    if (!response.data.success) {
-      throw new Error(response.data.error || '감정 분석 히스토리 조회에 실패했습니다.');
-    }
-    return response.data.data!;
+    return emotionRepository.getEmotionPatterns(sessionId);
   }
 
   // CBT 피드백 생성
   async generateCBTFeedback(data: {
-    emotionAnalysis: any;
+    emotionAnalysis: EmotionAnalysis;
     sessionId?: string;
   }): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.post('/emotion/cbt/feedback', {
-      emotionAnalysis: data.emotionAnalysis,
-      sessionId: data.sessionId,
-    });
-    if (!response.data.success) {
-      throw new Error(response.data.error || 'CBT 피드백 생성에 실패했습니다.');
-    }
-    return response.data.data!;
+    return emotionRepository.generateCBTFeedback(data);
   }
 
-  // 위험 신호 감지
+  // 위험도 평가
   async assessRisk(data: {
-    emotionAnalysis: any;
+    emotionAnalysis: EmotionAnalysis;
     sessionId?: string;
   }): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.post('/emotion/risk-assessment', {
-      emotionAnalysis: data.emotionAnalysis,
-      sessionId: data.sessionId,
-    });
-    if (!response.data.success) {
-      throw new Error(response.data.error || '위험 신호 감지에 실패했습니다.');
-    }
-    return response.data.data!;
+    return emotionRepository.assessRisk(data);
   }
 
-  // 사용자 인증 등 기타 API 함수도 동일하게 추가 가능
+  // ===== 채팅 관련 (ChatRepository 위임) =====
 
-  // API 연결 테스트
-  async testConnection(): Promise<boolean> {
-    try {
-      const response = await this.api.get('/test/db-connection');
-      return response.status === 200;
-    } catch (error) {
-      console.error('API 연결 테스트 실패:', error);
-      return false;
-    }
+  // AI 채팅 메시지 전송
+  async sendChatMessage(message: string, sessionId?: string, emotionContext?: any): Promise<ChatMessage> {
+    return chatRepository.sendChatMessage({ message, sessionId, emotionContext });
   }
 
-  // 데이터베이스 연결 테스트
-  async testDatabaseConnection(): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.get('/test/db-connection');
-    if (!response.data.success) {
-      throw new Error(response.data.error || '데이터베이스 연결 테스트에 실패했습니다.');
-    }
-    return response.data.data!;
+  // 채팅 히스토리 조회
+  async getChatHistory(sessionId: string): Promise<ChatMessage[]> {
+    return chatRepository.getChatHistory(sessionId);
   }
+
+  // 채팅 컨텍스트 조회
+  async getChatContext(sessionId: string): Promise<any> {
+    return chatRepository.getChatContext(sessionId);
+  }
+
+  // 세션 히스토리 조회
+  async getSessionHistory(userId: string): Promise<any> {
+    return chatRepository.getSessionHistory(userId);
+  }
+
+  // 세션 리포트 생성
+  async generateSessionReport(sessionId: string): Promise<Blob> {
+    return chatRepository.generateSessionReport(sessionId);
+  }
+
+  // 세션 종료
+  async endSession(sessionId: string): Promise<void> {
+    return chatRepository.endSession(sessionId);
+  }
+
+  // 새 세션 시작
+  async startSession(userId: string): Promise<{ sessionId: string }> {
+    return chatRepository.startSession(userId);
+  }
+
+  // 메시지 삭제
+  async deleteMessage(messageId: string): Promise<void> {
+    return chatRepository.deleteMessage(messageId);
+  }
+
+  // 채팅 세션 내보내기
+  async exportChatSession(sessionId: string, format: 'pdf' | 'json' = 'pdf'): Promise<Blob> {
+    return chatRepository.exportChatSession(sessionId, format);
+  }
+
+  // 채팅 통계 조회
+  async getChatStatistics(sessionId: string): Promise<any> {
+    return chatRepository.getChatStatistics(sessionId);
+  }
+
+  // ===== 사용자 관리 =====
 
   // 사용자 목록 조회
-  async getUsers(): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.get('/test/users');
+  async getUsers(): Promise<UserProfile[]> {
+    const response: AxiosResponse<ApiResponse<UserProfile[]>> = await this.api.get('/users');
     if (!response.data.success) {
       throw new Error(response.data.error || '사용자 목록 조회에 실패했습니다.');
     }
@@ -313,43 +144,63 @@ class ApiService {
   }
 
   // 사용자 생성
-  async createUser(data: { name: string; email: string }): Promise<any> {
-    const response: AxiosResponse<ApiResponse<any>> = await this.api.post('/test/users', data);
+  async createUser(data: { name: string; email: string }): Promise<UserProfile> {
+    const response: AxiosResponse<ApiResponse<UserProfile>> = await this.api.post('/users', data);
     if (!response.data.success) {
       throw new Error(response.data.error || '사용자 생성에 실패했습니다.');
     }
     return response.data.data!;
   }
 
-  // 현재 API URL 확인
+  // ===== 시스템 관리 =====
+
+  // 연결 테스트
+  async testConnection(): Promise<boolean> {
+    try {
+      const response: AxiosResponse<ApiResponse<{ status: string }>> = await this.api.get('/health');
+      return response.data.success && response.data.data?.status === 'ok';
+    } catch (error) {
+      console.error('서버 연결 테스트 실패:', error);
+      return false;
+    }
+  }
+
+  // 데이터베이스 연결 테스트
+  async testDatabaseConnection(): Promise<any> {
+    const response: AxiosResponse<ApiResponse<any>> = await this.api.get('/health/database');
+    if (!response.data.success) {
+      throw new Error(response.data.error || '데이터베이스 연결 테스트에 실패했습니다.');
+    }
+    return response.data.data!;
+  }
+
+  // API URL 반환
   getApiUrl(): string {
-    return this.api.defaults.baseURL || '';
+    return API_URL;
   }
 
-  // 파일 유효성 검사 메서드들
-  private validateImageFile(file: File): void {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-    const maxSize = 5 * 1024 * 1024; // 5MB
+  // ===== 레거시 호환성 (점진적 제거 예정) =====
 
-    if (!allowedTypes.includes(file.type)) {
-      throw new Error('지원하지 않는 이미지 형식입니다. (JPG, PNG, GIF만 지원)');
-    }
-
-    if (file.size > maxSize) {
-      throw new Error('이미지 파일 크기가 너무 큽니다. (최대 5MB)');
-    }
-  }
-
-  private validateAudioFile(file: File): void {
-    const allowedTypes = ['audio/wav', 'audio/mp3', 'audio/m4a', 'audio/ogg'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
-
-    if (!allowedTypes.includes(file.type)) {
-      throw new Error('지원하지 않는 오디오 형식입니다. (WAV, MP3, M4A, OGG만 지원)');
-    }
-
-    if (file.size > maxSize) {
-      throw new Error('오디오 파일 크기가 너무 큽니다. (최대 10MB)');
+  // 기존 analyzeEmotion 메서드 (하위 호환성)
+  async analyzeEmotion(data: {
+    mediaType: 'text' | 'audio' | 'image';
+    text?: string;
+    audioFile?: File;
+    imageFile?: File;
+    sessionId?: string;
+  }): Promise<EmotionAnalysis> {
+    switch (data.mediaType) {
+      case 'text':
+        if (!data.text) throw new Error('텍스트가 필요합니다.');
+        return this.analyzeTextEmotion({ text: data.text, sessionId: data.sessionId });
+      case 'audio':
+        if (!data.audioFile) throw new Error('오디오 파일이 필요합니다.');
+        return this.analyzeVoiceEmotion({ audioFile: data.audioFile, sessionId: data.sessionId });
+      case 'image':
+        if (!data.imageFile) throw new Error('이미지 파일이 필요합니다.');
+        return this.analyzeFacialEmotion({ imageFile: data.imageFile, sessionId: data.sessionId });
+      default:
+        throw new Error('지원하지 않는 미디어 타입입니다.');
     }
   }
 }

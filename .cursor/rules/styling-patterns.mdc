@@ -1,0 +1,233 @@
+# Tailwind CSS & Styling Patterns
+
+## 🎨 Design System Architecture
+
+### Color Palette System
+Reference [src/app/globals.css](mdc:src/app/globals.css) for the unified color system:
+
+```css
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: #a5b4fc;
+  --accent: #10b981;
+  --accent-dark: #059669;
+  --secondary: #f8fafc;
+  --secondary-dark: #e2e8f0;
+  --neutral: #64748b;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+}
+```
+
+### Tailwind Configuration
+Reference [tailwind.config.js](mdc:tailwind.config.js) for content paths and theme extensions.
+
+## 🚨 CRITICAL STYLING RULES
+
+### ✅ MUST DO
+1. **Use CSS variables for colors** - `bg-primary`, `text-accent`
+2. **Use Tailwind utility classes** - No inline styles
+3. **Follow responsive design** - `sm:`, `md:`, `lg:` prefixes
+4. **Use consistent spacing** - `space-y-8`, `gap-6`, `p-4`
+5. **Implement hover states** - `hover:shadow-xl`, `hover:-translate-y-1`
+6. **Use proper transitions** - `transition-all duration-200`
+7. **Follow accessibility** - `focus:ring-2 focus:ring-primary/50`
+
+### ❌ NEVER DO
+1. **Don't use inline styles** - Always use Tailwind classes
+2. **Don't use CSS modules** - Use Tailwind CSS exclusively
+3. **Don't hardcode colors** - Use CSS variables
+4. **Don't skip responsive design** - Always consider mobile first
+5. **Don't ignore focus states** - Implement proper keyboard navigation
+6. **Don't use arbitrary values** - Use Tailwind's design tokens
+
+## 🎯 Component Styling Patterns
+
+### Button Component Styling
+Reference [src/components/ui/Button.tsx](mdc:src/components/ui/Button.tsx):
+
+```typescript
+const baseClasses = "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+
+const variantClasses = {
+  primary: "bg-primary text-white hover:bg-primary-dark focus:ring-primary/50 shadow-sm hover:shadow-md",
+  secondary: "bg-secondary text-gray-700 hover:bg-secondary-dark focus:ring-gray-500/50 border border-gray-300",
+  outline: "bg-transparent text-primary border-2 border-primary hover:bg-primary hover:text-white focus:ring-primary/50",
+  ghost: "bg-transparent text-gray-600 hover:bg-gray-100 focus:ring-gray-500/50",
+  gradient: "bg-gradient-to-r from-primary to-primary-dark text-white hover:from-primary-dark hover:to-primary focus:ring-primary/50 shadow-lg hover:shadow-xl"
+};
+```
+
+### Card Component Styling
+Reference [src/components/ui/Card.tsx](mdc:src/components/ui/Card.tsx):
+
+```typescript
+const baseClasses = "rounded-xl transition-all duration-300";
+
+const variantClasses = {
+  default: "bg-white border border-gray-200 shadow-sm",
+  elevated: "bg-white shadow-lg shadow-gray-200/50 border-0",
+  outlined: "bg-white border-2 border-gray-200 shadow-none",
+  gradient: "bg-gradient-to-br from-white to-gray-50 border border-gray-200 shadow-md"
+};
+
+const hoverClasses = hover ? "hover:shadow-xl hover:-translate-y-1 hover:border-primary/20" : "";
+```
+
+## 🎨 Layout Patterns
+
+### Page Layout Structure
+```typescript
+return (
+  <div className="min-h-screen bg-gray-50">
+    <Navigation />
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="space-y-8">
+        {/* Page content */}
+      </div>
+    </main>
+  </div>
+);
+```
+
+### Grid and Flexbox Patterns
+```typescript
+// Responsive grid
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+// Flexbox with centering
+<div className="flex items-center justify-center gap-4">
+
+// Space between items
+<div className="flex items-center justify-between">
+```
+
+## 🔧 Utility Functions
+
+### Class Name Utility
+Reference [src/utils/cn.ts](mdc:src/utils/cn.ts) for class merging:
+
+```typescript
+import { cn } from '../../utils/cn';
+
+className={cn(
+  baseClasses,
+  variantClasses[variant],
+  sizeClasses[size],
+  iconClasses,
+  className
+)}
+```
+
+## 📱 Responsive Design Patterns
+
+### Breakpoint System
+```typescript
+// Mobile first approach
+className="text-sm md:text-base lg:text-lg"
+
+// Responsive spacing
+className="p-4 sm:p-6 lg:p-8"
+
+// Responsive grid
+className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+```
+
+### Mobile-Specific Styles
+```css
+@media (max-width: 768px) {
+  .emotion-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .control-button-group {
+    flex-direction: column;
+  }
+}
+```
+
+## 🎭 Animation and Transitions
+
+### Transition Patterns
+```typescript
+// Smooth transitions
+className="transition-all duration-200 ease-in-out"
+
+// Hover animations
+className="hover:scale-105 hover:shadow-lg"
+
+// Loading states
+className="animate-pulse"
+```
+
+### Custom Animations
+Reference [src/app/globals.css](mdc:src/app/globals.css) for custom keyframes:
+
+```css
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+```
+
+## 🎨 Visual Hierarchy
+
+### Typography Scale
+```typescript
+// Headings
+className="text-2xl font-bold text-gray-900"
+className="text-xl font-semibold text-gray-800"
+className="text-lg font-medium text-gray-700"
+
+// Body text
+className="text-base text-gray-600"
+className="text-sm text-gray-500"
+```
+
+### Shadow System
+```typescript
+// Elevation levels
+className="shadow-sm"    // Subtle elevation
+className="shadow-md"    // Medium elevation
+className="shadow-lg"    // High elevation
+className="shadow-xl"    // Maximum elevation
+```
+
+## ♿ Accessibility Patterns
+
+### Focus Management
+```typescript
+// Focus rings
+className="focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2"
+
+// Reduced motion
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse {
+    animation: none;
+  }
+}
+```
+
+### Color Contrast
+```typescript
+// Semantic colors for accessibility
+className="text-success"    // Green for success
+className="text-warning"    // Orange for warnings
+className="text-error"      // Red for errors
+```
+description:
+globs:
+alwaysApply: false
+---

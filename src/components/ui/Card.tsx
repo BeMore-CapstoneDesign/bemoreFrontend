@@ -1,100 +1,95 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 
-interface CardProps {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
-  className?: string;
-  padding?: 'sm' | 'md' | 'lg';
-  shadow?: 'sm' | 'md' | 'lg';
-  border?: boolean;
-  onClick?: () => void;
+  variant?: 'default' | 'elevated' | 'outlined' | 'gradient';
+  hover?: boolean;
 }
 
-export const Card: React.FC<CardProps> = ({
-  children,
-  className,
-  padding = 'md',
-  shadow = 'md',
-  border = false,
-  onClick,
-}) => {
-  const paddingClasses = {
-    sm: 'p-4',
-    md: 'p-6',
-    lg: 'p-8',
+interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
+}
+
+interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
+  children: React.ReactNode;
+}
+
+interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
+}
+
+export function Card({ 
+  children, 
+  variant = 'default', 
+  hover = false,
+  className, 
+  ...props 
+}: CardProps) {
+  const baseClasses = "rounded-xl transition-all duration-300";
+  
+  const variantClasses = {
+    default: "bg-white border border-gray-200 shadow-sm",
+    elevated: "bg-white shadow-lg shadow-gray-200/50 border-0",
+    outlined: "bg-white border-2 border-gray-200 shadow-none",
+    gradient: "bg-gradient-to-br from-white to-gray-50 border border-gray-200 shadow-md"
   };
   
-  const shadowClasses = {
-    sm: 'shadow-sm',
-    md: 'shadow-md',
-    lg: 'shadow-lg',
-  };
+  const hoverClasses = hover ? "hover:shadow-xl hover:-translate-y-1 hover:border-primary/20" : "";
   
   return (
-    <div
+    <div 
       className={cn(
-        'bg-white rounded-xl',
-        paddingClasses[padding],
-        shadowClasses[shadow],
-        border && 'border border-gray-200',
-        onClick && 'cursor-pointer',
+        baseClasses,
+        variantClasses[variant],
+        hoverClasses,
         className
-      )}
-      onClick={onClick}
+      )} 
+      {...props}
     >
       {children}
     </div>
   );
-};
-
-interface CardHeaderProps {
-  children: React.ReactNode;
-  className?: string;
 }
 
-export const CardHeader: React.FC<CardHeaderProps> = ({ children, className }) => {
+export function CardHeader({ children, className, ...props }: CardHeaderProps) {
   return (
-    <div className={cn('mb-4', className)}>
+    <div 
+      className={cn(
+        "px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50/50 to-transparent",
+        className
+      )} 
+      {...props}
+    >
       {children}
     </div>
   );
-};
-
-interface CardTitleProps {
-  children: React.ReactNode;
-  className?: string;
 }
 
-export const CardTitle: React.FC<CardTitleProps> = ({ children, className }) => {
+export function CardTitle({ children, className, ...props }: CardTitleProps) {
   return (
-    <h3 className={cn('text-lg font-semibold text-gray-900', className)}>
+    <h3 
+      className={cn(
+        "text-lg font-semibold text-gray-900 flex items-center gap-2",
+        className
+      )} 
+      {...props}
+    >
       {children}
     </h3>
   );
-};
-
-interface CardContentProps {
-  children: React.ReactNode;
-  className?: string;
 }
 
-export const CardContent: React.FC<CardContentProps> = ({ children, className }) => {
+export function CardContent({ children, className, ...props }: CardContentProps) {
   return (
-    <div className={cn('', className)}>
+    <div 
+      className={cn(
+        "px-6 py-4",
+        className
+      )} 
+      {...props}
+    >
       {children}
     </div>
   );
-};
-
-interface CardFooterProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-export const CardFooter: React.FC<CardFooterProps> = ({ children, className }) => {
-  return (
-    <div className={cn('mt-4 pt-4 border-t border-gray-200', className)}>
-      {children}
-    </div>
-  );
-}; 
+} 

@@ -1,0 +1,62 @@
+# BeMore Frontend Project Structure & Architecture
+
+## 🏗️ Project Architecture Overview
+
+This is a **Next.js 15.3.5** application using **App Router** with **TypeScript**, **Tailwind CSS 4**, and **Zustand** for state management.
+
+### Core Directories
+- `src/app/` - Next.js App Router pages and layouts
+- `src/components/` - Reusable React components
+- `src/modules/` - Zustand stores and state management
+- `src/services/` - API services and external integrations
+- `src/types/` - TypeScript type definitions
+- `src/utils/` - Utility functions and helpers
+- `src/hooks/` - Custom React hooks
+- `src/assets/` - Static assets (fonts, images)
+
+### Key Files
+- [package.json](mdc:package.json) - Dependencies and scripts
+- [tailwind.config.js](mdc:tailwind.config.js) - Tailwind CSS configuration
+- [src/app/globals.css](mdc:src/app/globals.css) - Global styles and CSS variables
+- [src/modules/store.ts](mdc:src/modules/store.ts) - Main Zustand store
+- [tsconfig.json](mdc:tsconfig.json) - TypeScript configuration
+
+## 🚨 CRITICAL RULES - MUST FOLLOW
+
+### ✅ ALWAYS DO
+1. **Use TypeScript for ALL files** - No JavaScript files allowed
+2. **Follow App Router conventions** - Use `page.tsx` in directories
+3. **Extend HTML attributes** in component props using `React.HTMLAttributes`
+4. **Use CSS variables** from [src/app/globals.css](mdc:src/app/globals.css) for colors
+5. **Implement proper error boundaries** for all pages
+6. **Use Zustand store** for global state management
+7. **Follow component composition pattern** with sub-components
+
+### ❌ NEVER DO
+1. **Don't use inline styles** - Always use Tailwind classes
+2. **Don't create JavaScript files** - Only TypeScript (.ts/.tsx)
+3. **Don't use CSS modules** - Use Tailwind CSS exclusively
+4. **Don't bypass the store** - All state changes go through Zustand
+5. **Don't use any** type - Always define proper TypeScript interfaces
+6. **Don't create duplicate components** - Check existing UI components first
+
+## 🎯 Component Architecture Patterns
+
+### UI Components Structure
+- [src/components/ui/Button.tsx](mdc:src/components/ui/Button.tsx) - Base button with variants
+- [src/components/ui/Card.tsx](mdc:src/components/ui/Card.tsx) - Card component with composition
+- [src/utils/cn.ts](mdc:src/utils/cn.ts) - Class name utility for Tailwind
+
+### Layout Components
+- [src/components/layout/Navigation.tsx](mdc:src/components/layout/Navigation.tsx) - Unified navigation
+- [src/components/layout/Layout.tsx](mdc:src/components/layout/Layout.tsx) - Base layout wrapper
+
+## 🔧 Development Environment
+- **Port**: 3005 (configured in [package.json](mdc:package.json))
+- **Build Tool**: Turbopack for development
+- **Linting**: ESLint with Next.js rules
+- **Type Checking**: Strict TypeScript mode enabled
+description:
+globs:
+alwaysApply: false
+---

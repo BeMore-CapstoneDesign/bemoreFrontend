@@ -1,13 +1,49 @@
 @import "tailwindcss";
 
+/* 기본 스타일 */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* 통일된 색상 팔레트 */
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: #a5b4fc;
+  
+  --secondary: #f8fafc;
+  --secondary-dark: #e2e8f0;
+  
+  --accent: #10b981;
+  --accent-dark: #059669;
+  
+  --neutral: #64748b;
+  --neutral-light: #94a3b8;
+  
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  
+  /* 그라데이션 */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --gradient-accent: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
 }
 
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-neutral: var(--neutral);
+  --color-neutral-light: var(--neutral-light);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
   --font-sans: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
 }
@@ -61,8 +97,6 @@ body {
 .fade-in {
   animation: fadeIn 0.3s ease-out;
 }
-
-
 
 /* 감정별 색상 변수 */
 :root {
@@ -372,8 +406,6 @@ body {
   background: linear-gradient(45deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
   border-color: rgba(239, 68, 68, 0.5);
 }
-
-
 
 /* 감정 표시 개선 */
 .emotion-display {

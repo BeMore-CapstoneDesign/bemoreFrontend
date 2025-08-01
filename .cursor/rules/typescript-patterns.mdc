@@ -1,0 +1,137 @@
+# TypeScript Patterns & Best Practices
+
+## 🎯 TypeScript Architecture Rules
+
+### Component Props Pattern
+**ALWAYS** extend HTML attributes for maximum reusability:
+
+```typescript
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  children: React.ReactNode;
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'gradient';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  loading?: boolean;
+  icon?: React.ReactNode;
+  iconPosition?: 'left' | 'right';
+}
+```
+
+### Function Component Declaration
+**ALWAYS** use named function exports:
+
+```typescript
+export function ComponentName({ prop1, prop2 }: ComponentProps) {
+  return <div>{/* JSX */}</div>;
+}
+```
+
+## 🚨 CRITICAL TYPE SAFETY RULES
+
+### ✅ MUST DO
+1. **Define interfaces for ALL props** - No inline type definitions
+2. **Use React.ReactNode for children** - Never use ReactNode directly
+3. **Extend HTML attributes** - Always use `React.HTMLAttributes<HTMLElement>`
+4. **Use proper event types** - `React.MouseEvent<HTMLButtonElement>`
+5. **Define return types** for complex functions
+6. **Use union types** for variant props (`'primary' | 'secondary'`)
+7. **Import types explicitly** - `import { ComponentProps } from './types'`
+
+### ❌ NEVER DO
+1. **Don't use `any` type** - Always define proper interfaces
+2. **Don't use `React.FC`** - Use function declarations instead
+3. **Don't inline complex types** - Extract to interfaces
+4. **Don't use `Object` or `object`** - Use specific interfaces
+5. **Don't ignore TypeScript errors** - Fix all type issues
+6. **Don't use `as` casting** unless absolutely necessary
+
+## 🎨 State Management Types
+
+### Zustand Store Pattern
+Reference [src/modules/store.ts](mdc:src/modules/store.ts) for store structure:
+
+```typescript
+interface AppState {
+  // State properties
+  user: UserProfile | null;
+  isAuthenticated: boolean;
+  
+  // Actions
+  setUser: (user: UserProfile) => void;
+  setAuthenticated: (status: boolean) => void;
+}
+```
+
+### Custom Hook Types
+```typescript
+interface UseCustomHookReturn {
+  data: DataType;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => void;
+}
+```
+
+## 🔧 Type Utilities
+
+### Common Type Patterns
+```typescript
+// Component with children
+interface LayoutProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+// Event handlers
+interface ButtonProps {
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
+}
+
+// Conditional props
+interface ConditionalProps {
+  variant: 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
+  disabled?: boolean;
+}
+```
+
+## 📁 File Organization
+
+### Type Definition Files
+- [src/types/index.ts](mdc:src/types/index.ts) - Main type exports
+- [src/types/chat.ts](mdc:src/types/chat.ts) - Chat-related types
+- [src/types/emotion.ts](mdc:src/types/emotion.ts) - Emotion analysis types
+
+### Import Patterns
+```typescript
+// Import types from dedicated files
+import { UserProfile, EmotionAnalysis } from '../types';
+
+// Import component props
+import type { ButtonProps } from './Button';
+
+// Import store types
+import type { AppState } from '../modules/store';
+```
+
+## 🎯 Strict Mode Compliance
+
+### TypeScript Configuration
+Reference [tsconfig.json](mdc:tsconfig.json) for strict settings:
+- `strict: true`
+- `noEmit: true`
+- `isolatedModules: true`
+- `jsx: preserve`
+
+### Path Mapping
+```json
+{
+  "paths": {
+    "@/*": ["./src/*"]
+  }
+}
+```
+description:
+globs:
+alwaysApply: false
+---

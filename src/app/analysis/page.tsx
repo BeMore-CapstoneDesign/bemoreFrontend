@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { Layout } from '../../components/layout/Layout';
+import { AnalysisLayout } from '../../components/layout/AnalysisLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { StepIndicator } from '../../components/ui/StepIndicator';
+import { ProgressIndicator } from '../../components/ui/ProgressIndicator';
+import { FeedbackMessage } from '../../components/ui/FeedbackMessage';
 import { 
   Camera, 
   Brain,
@@ -11,37 +14,26 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
-  Maximize2,
-  Minimize2,
-  RotateCcw,
-  Play,
-  Square,
   X,
   Lightbulb,
   Target,
-  ArrowRight,
   Eye,
-  Ear,
   MessageSquare,
-  TrendingUp,
-  AlertCircle,
-  Smile,
-  Frown,
-  Meh,
-  Heart,
-  Zap as Lightning,
-  Activity as Pulse
+  Activity,
+  Upload,
+  Phone,
+  Video,
+  Zap,
+  Palette
 } from 'lucide-react';
 import { useAppStore } from '../../modules/store';
+import { emotionRepository } from '../../services/repositories/emotionRepository';
 import { EmotionAnalysis } from '../../types';
 import { emotionEmojis } from '../../utils/emotion';
-import { apiService } from '../../services/api';
+import VideoCallEmotionAnalysis from '../../components/analysis/VideoCallEmotionAnalysis';
 
-type AnalysisState = 'idle' | 'session_ready' | 'session_active' | 'analyzing' | 'completed' | 'error';
-
-type AnalysisStep = 'preparing' | 'analyzing_text' | 'analyzing_voice' | 'analyzing_facial' | 'generating_feedback' | 'completed';
-
-type SessionState = 'not_started' | 'active' | 'completed';
+// 단순화된 워크플로우
+type SimpleWorkflow = 'ready' | 'analyzing' | 'result' | 'video-call';
 
 // 감정별 색상 시스템
 const emotionColors = {
@@ -87,296 +79,288 @@ const emotionColors = {
   }
 };
 
-// 분석 단계 표시 컴포넌트
-function AnalysisStepIndicator({ step }: { step: AnalysisStep }) {
-  const steps = [
-    { key: 'preparing', label: '분석 준비 중', icon: Brain },
-    { key: 'analyzing_text', label: '텍스트 분석 중', icon: MessageSquare },
-    { key: 'analyzing_voice', label: '음성 분석 중', icon: Volume2 },
-    { key: 'analyzing_facial', label: '표정 분석 중', icon: Eye },
-    { key: 'generating_feedback', label: '피드백 생성 중', icon: Lightbulb },
-    { key: 'completed', label: '분석 완료', icon: CheckCircle }
-  ];
-
-  const currentStepIndex = steps.findIndex(s => s.key === step);
-  const currentStep = steps[currentStepIndex];
-
-  return (
-    <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2">
-      <div className="analysis-status rounded-full px-4 py-2 flex items-center space-x-2">
-        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-        <span className="text-white text-sm font-medium">{currentStep.label}</span>
-        <currentStep.icon className="w-4 h-4 text-white" />
-      </div>
-    </div>
-  );
-}
-
-// 실시간 멀티모달 분석 인터페이스
+// 통합 멀티모달 분석 인터페이스
 function MultimodalAnalysisInterface({ 
   onStartAnalysis, 
-  onStopAnalysis, 
   isAnalyzing,
-  analysisStep,
-  autoStartMedia = false
+  progress,
+  currentStep
 }: { 
-  onStartAnalysis: () => void;
-  onStopAnalysis: () => void;
+  onStartAnalysis: (data: { text?: string; audioFile?: File; imageFile?: File }) => void; 
   isAnalyzing: boolean;
-  analysisStep: AnalysisStep;
-  autoStartMedia?: boolean;
+  progress: number;
+  currentStep: string;
 }) {
+  const [textInput, setTextInput] = useState('');
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [showMicrophone, setShowMicrophone] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isCameraOn, setIsCameraOn] = useState(false);
-  const [isMicOn, setIsMicOn] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const [permissionStatus, setPermissionStatus] = useState<'requesting' | 'granted' | 'denied' | 'idle'>('idle');
-  const [showPermissionGuide, setShowPermissionGuide] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 클라이언트 사이드 마운트 확인
-  useLayoutEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const steps = [
+    { key: 'preparing', label: '준비 중' },
+    { key: 'analyzing', label: '분석 중' },
+    { key: 'completed', label: '완료' }
+  ];
 
-  useEffect(() => {
-    if (isMounted && autoStartMedia) {
-      // 상담이 시작되면 자동으로 카메라와 마이크 켜기
-      setIsCameraOn(true);
-      setIsMicOn(true);
+  const handleStartAnalysis = async () => {
+    // 최소한 하나의 입력이 있어야 함
+    if (!textInput.trim() && !audioFile && !imageFile) {
+      alert('텍스트, 음성, 또는 이미지 중 하나 이상을 입력해주세요.');
+      return;
     }
-  }, [isMounted, autoStartMedia]);
 
-  useEffect(() => {
-    if (isCameraOn && isMounted) {
-      startCamera();
-    } else {
-      stopCamera();
-    }
-  }, [isCameraOn, isMounted]);
-
-  const startCamera = async () => {
-    if (!isMounted) return;
-    
-    setPermissionStatus('requesting');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: { ideal: 1280 }, 
-          height: { ideal: 720 },
-          facingMode: 'user'
-        }, 
-        audio: true 
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+    // 권한 요청
+    if (audioFile || showMicrophone) {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        setShowMicrophone(true);
+      } catch (error) {
+        console.error('음성 권한 거부:', error);
       }
-      setPermissionStatus('granted');
-      setShowPermissionGuide(false);
-    } catch (error) {
-      console.error('카메라 접근 실패:', error);
-      setPermissionStatus('denied');
-      setShowPermissionGuide(true);
+    }
+    
+    if (imageFile || showCamera) {
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        setShowCamera(true);
+      } catch (error) {
+        console.error('카메라 권한 거부:', error);
+      }
+    }
+    
+    onStartAnalysis({
+      text: textInput.trim() || undefined,
+      audioFile: audioFile || undefined,
+      imageFile: imageFile || undefined
+    });
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'audio' | 'image') => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (type === 'audio') {
+        setAudioFile(file);
+      } else {
+        setImageFile(file);
+      }
     }
   };
 
-  const stopCamera = () => {
-    if (!isMounted) return;
-    
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-  };
-
-  const toggleFullscreen = () => {
-    if (!isMounted) return;
-    
-    if (!document.fullscreenElement) {
-      videoRef.current?.requestFullscreen();
-      setIsFullscreen(true);
+  const removeFile = (type: 'audio' | 'image') => {
+    if (type === 'audio') {
+      setAudioFile(null);
     } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+      setImageFile(null);
     }
   };
-
-
 
   return (
-    <div className="space-y-6">
-      {/* 권한 안내 모달 */}
-      {showPermissionGuide && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
-                <Camera className="w-8 h-8 text-red-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">카메라 및 마이크 권한 필요</h3>
-                <p className="text-gray-600 mb-4">
-                  실시간 감정 분석을 위해 카메라와 마이크 접근 권한이 필요합니다.
-                </p>
-                <div className="space-y-2 text-sm text-gray-500">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>브라우저 주소창의 카메라/마이크 아이콘을 클릭하세요</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>"허용"을 선택해주세요</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPermissionGuide(false)}
-                  className="flex-1"
-                >
-                  나중에
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowPermissionGuide(false);
-                    startCamera();
-                  }}
-                  className="flex-1"
-                >
-                  다시 시도
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+    <div className="space-y-8">
+      {/* 텍스트 입력 */}
+      <Card variant="elevated" hover>
+        <CardHeader>
+          <CardTitle>
+            <MessageSquare className="w-5 h-5 text-primary" />
+            <span>텍스트 입력</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <textarea
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            placeholder="감정을 분석할 텍스트를 입력하세요... (선택사항)"
+            className="w-full h-32 p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+            disabled={isAnalyzing}
+          />
+        </CardContent>
+      </Card>
 
-      {/* 메인 비디오 화면 */}
-      <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl">
-        <div className="relative aspect-video">
-          {isMounted && (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
-          )}
-          
-
-          
-          {/* 실시간 분석 오버레이 */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent">
-            {/* 분석 단계 표시 */}
-            {isAnalyzing && <AnalysisStepIndicator step={analysisStep} />}
-            
-            {/* 상단 상태바 */}
-            <div className="absolute top-2 left-2 right-2 top-status-bar opacity-90 hover:opacity-100 transition-opacity">
-              {/* 왼쪽: 분석 상태 */}
-              <div className={`status-indicators ${isAnalyzing ? 'realtime-analysis-indicator' : ''}`}>
-                <div className={`status-indicator-item ${isAnalyzing ? 'active' : 'inactive'}`}>
-                  <div className={`w-2 h-2 rounded-full ${isAnalyzing ? 'bg-green-500 emotion-pulse' : 'bg-gray-400'}`}></div>
-                  <span className="text-white text-xs font-medium">
-                    {isAnalyzing ? '분석 중' : '대기 중'}
-                  </span>
-                  {isAnalyzing && (
-                    <div className="flex items-center space-x-1">
-                      <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse"></div>
-                      <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                      <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                    </div>
-                  )}
+      {/* 음성 입력 */}
+      <Card variant="elevated" hover>
+        <CardHeader>
+          <CardTitle>
+            <Volume2 className="w-5 h-5 text-accent" />
+            <span>음성 입력</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {audioFile ? (
+              <div className="flex items-center justify-between p-4 bg-accent/10 border border-accent/20 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <Volume2 className="w-5 h-5 text-accent" />
+                  <span className="text-sm text-accent-dark font-medium">{audioFile.name}</span>
                 </div>
-              </div>
-              
-              {/* 오른쪽: 컨트롤 버튼들 */}
-              <div className="status-indicators">
-                {/* 카메라 상태 표시 */}
-                <div className={`status-indicator-item ${isCameraOn ? 'active' : 'inactive'}`}>
-                  <Camera className={`w-3 h-3 ${isCameraOn ? 'text-green-400' : 'text-red-400'}`} />
-                  <span className="text-white text-xs">
-                    {isCameraOn ? '카메라 켜짐' : '카메라 꺼짐'}
-                  </span>
-                </div>
-                
-                {/* 마이크 상태 표시 */}
-                <div className={`status-indicator-item ${isMicOn ? 'active' : 'inactive'}`}>
-                  {isMicOn ? (
-                    <Volume2 className="w-3 h-3 text-green-400" />
-                  ) : (
-                    <VolumeX className="w-3 h-3 text-red-400" />
-                  )}
-                  <span className="text-white text-xs">
-                    {isMicOn ? '마이크 켜짐' : '마이크 꺼짐'}
-                  </span>
-                </div>
-                
-                {/* 전체화면 버튼 */}
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={toggleFullscreen}
-                  className="status-indicator-item hover:bg-white/20"
-                  title={isFullscreen ? '전체화면 종료' : '전체화면'}
+                  onClick={() => removeFile('audio')}
+                  icon={<X className="w-4 h-4" />}
                 >
-                  {isFullscreen ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                  제거
                 </Button>
               </div>
-            </div>
-
-            {/* 하단 컨트롤 */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-              <div className="control-button-group">
-                {/* 카메라 컨트롤 */}
-                <div className="control-item">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsCameraOn(!isCameraOn)}
-                    className={`control-button ${isCameraOn ? 'camera-on active' : 'camera-off inactive'}`}
-                    title={isCameraOn ? '카메라 끄기' : '카메라 켜기'}
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span className="text-xs whitespace-nowrap">{isCameraOn ? '켜짐' : '꺼짐'}</span>
-                  </Button>
-                </div>
-                
-                {/* 마이크 컨트롤 */}
-                <div className="control-item">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsMicOn(!isMicOn)}
-                    className={`control-button ${isMicOn ? 'mic-on active' : 'mic-off inactive'}`}
-                    title={isMicOn ? '마이크 끄기' : '마이크 켜기'}
-                  >
-                    {isMicOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                    <span className="text-xs whitespace-nowrap">{isMicOn ? '켜짐' : '꺼짐'}</span>
-                  </Button>
-                </div>
-                
-                {/* 분석 시작/중지 버튼 */}
-                <div className="control-item">
-                  <Button
-                    onClick={onStopAnalysis}
-                    className="control-button stop-analysis"
-                    title="상담 종료"
-                  >
-                    <Square className="w-4 h-4" />
-                    <span className="text-xs whitespace-nowrap">종료</span>
-                  </Button>
-                </div>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  onChange={(e) => handleFileUpload(e, 'audio')}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isAnalyzing}
+                  icon={<Upload className="w-4 h-4" />}
+                >
+                  음성 파일 업로드
+                </Button>
+                <span className="text-sm text-gray-500">또는</span>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowMicrophone(true)}
+                  disabled={isAnalyzing}
+                  icon={<Volume2 className="w-4 h-4" />}
+                >
+                  실시간 녹음
+                </Button>
               </div>
-            </div>
+            )}
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        <canvas ref={canvasRef} className="hidden" />
-      </div>
+      {/* 이미지 입력 */}
+      <Card variant="elevated" hover>
+        <CardHeader>
+          <CardTitle>
+            <Camera className="w-5 h-5 text-purple-600" />
+            <span>이미지 입력</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {imageFile ? (
+              <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <Camera className="w-5 h-5 text-purple-600" />
+                  <span className="text-sm text-purple-800 font-medium">{imageFile.name}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeFile('image')}
+                  icon={<X className="w-4 h-4" />}
+                >
+                  제거
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'image')}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isAnalyzing}
+                  icon={<Upload className="w-4 h-4" />}
+                >
+                  이미지 파일 업로드
+                </Button>
+                <span className="text-sm text-gray-500">또는</span>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCamera(true)}
+                  disabled={isAnalyzing}
+                  icon={<Camera className="w-4 h-4" />}
+                >
+                  실시간 촬영
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 미디어 상태 표시 */}
+      {(showCamera || showMicrophone) && (
+        <Card variant="gradient">
+          <CardHeader>
+            <CardTitle>
+              <Activity className="w-5 h-5 text-accent" />
+              <span>미디어 상태</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-4">
+              {showCamera && (
+                <div className="flex items-center space-x-2 text-accent">
+                  <Camera className="w-5 h-5" />
+                  <span className="font-medium">카메라 활성화</span>
+                </div>
+              )}
+              {showMicrophone && (
+                <div className="flex items-center space-x-2 text-accent">
+                  <Volume2 className="w-5 h-5" />
+                  <span className="font-medium">마이크 활성화</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 분석 진행률 */}
+      {isAnalyzing && (
+        <Card variant="gradient">
+          <CardHeader>
+            <CardTitle>
+              <Brain className="w-5 h-5 text-primary" />
+              <span>분석 진행 상황</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <StepIndicator 
+              steps={steps} 
+              currentStep={currentStep} 
+              className="mb-6"
+            />
+            <ProgressIndicator 
+              progress={progress}
+              step={currentStep === 'preparing' ? '분석 준비 중...' : 
+                    currentStep === 'analyzing' ? '감정 분석 중...' : 
+                    '분석 완료'}
+              description="AI가 멀티모달 데이터를 분석하고 있습니다"
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 시작 버튼 */}
+      {!isAnalyzing && (
+        <div className="flex justify-center pt-4">
+          <Button
+            variant="gradient"
+            size="xl"
+            onClick={handleStartAnalysis}
+            disabled={!textInput.trim() && !audioFile && !imageFile}
+            icon={<Brain className="w-5 h-5" />}
+            className="px-12 py-4 text-lg font-semibold"
+          >
+            멀티모달 감정 분석 시작
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -391,323 +375,163 @@ function ResultModal({
   onClose: () => void;
   onNewAnalysis: () => void;
 }) {
-  const colors = emotionColors[result.emotion as keyof typeof emotionColors] || emotionColors.neutral;
-  const [showDetails, setShowDetails] = useState(false);
-  
   const getEmotionText = (emotion: string) => {
-    switch (emotion) {
-      case 'happy': return '기쁨';
-      case 'sad': return '슬픔';
-      case 'angry': return '분노';
-      case 'surprised': return '놀람';
-      case 'neutral': return '평온';
-      default: return emotion;
-    }
+    const emotionTexts: Record<string, string> = {
+      happy: '기쁨',
+      sad: '슬픔',
+      angry: '분노',
+      surprised: '놀람',
+      neutral: '중립'
+    };
+    return emotionTexts[emotion as keyof typeof emotionTexts] || emotion;
   };
 
   const getMoodText = (valence: number) => {
-    if (valence > 0.7) return '매우 긍정적';
-    if (valence > 0.5) return '긍정적';
-    if (valence > 0.3) return '중립적';
-    return '부정적';
+    if (valence > 0.6) return '매우 긍정적';
+    if (valence > 0.3) return '긍정적';
+    if (valence > -0.3) return '중립적';
+    if (valence > -0.6) return '부정적';
+    return '매우 부정적';
   };
 
   const getEnergyText = (arousal: number) => {
-    if (arousal > 0.7) return '매우 활발';
-    if (arousal > 0.5) return '활발';
-    if (arousal > 0.3) return '보통';
-    return '차분';
+    if (arousal > 0.6) return '매우 활발';
+    if (arousal > 0.3) return '활발';
+    if (arousal > -0.3) return '보통';
+    if (arousal > -0.6) return '차분';
+    return '매우 차분';
   };
-  
+
+  const emotionColor = emotionColors[result.emotion as keyof typeof emotionColors] || emotionColors.neutral;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className={`bg-white rounded-3xl p-8 max-w-2xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto border-2 ${colors.border}`}>
-        {/* 헤더 */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
-            <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${colors.gradient} flex items-center justify-center animate-pulse`}>
-              <CheckCircle className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900">감정 분석 완료</h3>
-              <p className="text-gray-600">표정, 음성, 텍스트를 종합한 결과</p>
-            </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">멀티모달 감정 분석 결과</h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-6 h-6 text-gray-600" />
+            </button>
           </div>
-          <Button variant="ghost" onClick={onClose} className="hover:bg-gray-100">
-            <X className="w-6 h-6" />
-          </Button>
-        </div>
 
-        {/* 핵심 결과 */}
-        <div className={`bg-gradient-to-r ${colors.bg} rounded-2xl p-6 mb-6 border ${colors.border} relative overflow-hidden`}>
-          <div className="absolute inset-0 opacity-10">
-            <div className={`absolute inset-0 bg-gradient-to-r ${colors.gradient} animate-pulse`} style={{ animationDuration: '3s' }} />
-          </div>
-          
-          <div className="text-center relative z-10">
-            <div className="text-6xl mb-4 animate-bounce" style={{ animationDuration: '2s' }}>
-              {emotionEmojis[result.emotion as keyof typeof emotionEmojis] || '😐'}
-            </div>
-            <h4 className={`text-3xl font-bold ${colors.text} mb-2`}>
-              {getEmotionText(result.emotion)}
-            </h4>
-            <p className="text-gray-600 mb-4">
-              {result.confidence > 0.8 ? '매우 확실한 분석' : result.confidence > 0.6 ? '확실한 분석' : '추정 분석'}
-            </p>
-            
-            {/* 간단한 요약 */}
-            <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className="bg-white/70 rounded-xl p-3">
-                <div className="text-sm text-gray-600 mb-1">전반적 기분</div>
-                <div className="text-lg font-bold text-green-800">{getMoodText(result.vadScore.valence)}</div>
-              </div>
-              <div className="bg-white/70 rounded-xl p-3">
-                <div className="text-sm text-gray-600 mb-1">에너지 레벨</div>
-                <div className="text-lg font-bold text-blue-800">{getEnergyText(result.vadScore.arousal)}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+          <div className="space-y-6">
+            {/* 주요 감정 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <span className={`text-2xl ${emotionEmojis[result.emotion as keyof typeof emotionEmojis] || '😐'}`}></span>
+                  <span>주요 감정</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center">
+                  <div className={`text-4xl mb-2 ${emotionEmojis[result.emotion as keyof typeof emotionEmojis] || '😐'}`}></div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    {getEmotionText(result.emotion)}
+                  </h3>
+                  <p className="text-gray-600">
+                    신뢰도: {Math.round(result.confidence * 100)}%
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* 상세 정보 토글 */}
-        <div className="mb-6">
-          <Button
-            onClick={() => setShowDetails(!showDetails)}
-            variant="outline"
-            className="w-full flex items-center justify-between"
-          >
-            <span>상세 분석 결과 보기</span>
-            <div className={`transform transition-transform ${showDetails ? 'rotate-180' : ''}`}>
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </Button>
-        </div>
-
-        {/* 상세 정보 (접을 수 있음) */}
-        {showDetails && (
-          <div className="space-y-6 mb-6">
             {/* VAD 점수 */}
-            <div className="bg-gray-50 rounded-2xl p-6">
-              <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <TrendingUp className="w-5 h-5 text-purple-500 mr-2" />
-                상세 감정 분석 (VAD)
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-xl p-4 border border-gray-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Heart className="w-5 h-5 text-green-500" />
-                    <h5 className="font-semibold text-gray-900">긍정성</h5>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Target className="w-5 h-5 text-indigo-600" />
+                  <span>감정 세부 분석</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 mb-2">긍정성</h4>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {Math.round(result.vadScore.valence * 100)}%
+                    </div>
+                    <p className="text-sm text-blue-600 mt-1">
+                      {getMoodText(result.vadScore.valence)}
+                    </p>
                   </div>
-                  <div className="text-2xl font-bold text-green-600 mb-2">
-                    {Math.round(result.vadScore.valence * 100)}%
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <h4 className="font-semibold text-green-800 mb-2">각성도</h4>
+                    <div className="text-2xl font-bold text-green-600">
+                      {Math.round(result.vadScore.arousal * 100)}%
+                    </div>
+                    <p className="text-sm text-green-600 mt-1">
+                      {getEnergyText(result.vadScore.arousal)}
+                    </p>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-green-500 h-3 rounded-full transition-all duration-1000 ease-out" 
-                      style={{ width: `${result.vadScore.valence * 100}%` }}
-                    />
-                  </div>
-                </div>
-                
-                <div className="bg-white rounded-xl p-4 border border-gray-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Pulse className="w-5 h-5 text-blue-500" />
-                    <h5 className="font-semibold text-gray-900">각성도</h5>
-                  </div>
-                  <div className="text-2xl font-bold text-blue-600 mb-2">
-                    {Math.round(result.vadScore.arousal * 100)}%
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-blue-500 h-3 rounded-full transition-all duration-1000 ease-out" 
-                      style={{ width: `${result.vadScore.arousal * 100}%` }}
-                    />
-                  </div>
-                </div>
-                
-                <div className="bg-white rounded-xl p-4 border border-gray-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Lightning className="w-5 h-5 text-purple-500" />
-                    <h5 className="font-semibold text-gray-900">지배성</h5>
-                  </div>
-                  <div className="text-2xl font-bold text-purple-600 mb-2">
-                    {Math.round(result.vadScore.dominance * 100)}%
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-purple-500 h-3 rounded-full transition-all duration-1000 ease-out" 
-                      style={{ width: `${result.vadScore.dominance * 100}%` }}
-                    />
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <h4 className="font-semibold text-purple-800 mb-2">지배성</h4>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {Math.round(result.vadScore.dominance * 100)}%
+                    </div>
+                    <p className="text-sm text-purple-600 mt-1">
+                      {result.vadScore.dominance > 0.5 ? '주도적' : '수동적'}
+                    </p>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* CBT 피드백 */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-200">
-              <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center mr-3">
-                  <Lightbulb className="w-4 h-4 text-white" />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Lightbulb className="w-5 h-5 text-yellow-600" />
+                  <span>CBT 피드백</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">인지 왜곡</h4>
+                    <p className="text-gray-700">{result.cbtFeedback.cognitiveDistortion}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">도전적 질문</h4>
+                    <p className="text-gray-700">{result.cbtFeedback.challenge}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">대안적 사고</h4>
+                    <p className="text-gray-700">{result.cbtFeedback.alternative}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">행동 계획</h4>
+                    <p className="text-gray-700">{result.cbtFeedback.actionPlan}</p>
+                  </div>
                 </div>
-                CBT 피드백
-              </h4>
-              <div className="space-y-4">
-                <div className="group">
-                  <h5 className="font-semibold text-gray-900 mb-2 flex items-center">
-                    <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center mr-2 group-hover:bg-red-200 transition-colors">
-                      <Target className="w-3 h-3 text-red-500" />
-                    </div>
-                    인지 왜곡 유형
-                  </h5>
-                  <p className="text-gray-700 bg-red-50 p-3 rounded-lg border border-red-100 group-hover:bg-red-100 transition-colors">
-                    {result.cbtFeedback.cognitiveDistortion}
-                  </p>
-                </div>
-                
-                <div className="group">
-                  <h5 className="font-semibold text-gray-900 mb-2 flex items-center">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2 group-hover:bg-blue-200 transition-colors">
-                      <ArrowRight className="w-3 h-3 text-blue-500" />
-                    </div>
-                    도전적 질문
-                  </h5>
-                  <p className="text-gray-700 bg-blue-50 p-3 rounded-lg border border-blue-100 group-hover:bg-blue-100 transition-colors">
-                    {result.cbtFeedback.challenge}
-                  </p>
-                </div>
-                
-                <div className="group">
-                  <h5 className="font-semibold text-gray-900 mb-2 flex items-center">
-                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mr-2 group-hover:bg-green-200 transition-colors">
-                      <Lightbulb className="w-3 h-3 text-green-500" />
-                    </div>
-                    대안적 사고
-                  </h5>
-                  <p className="text-gray-700 bg-green-50 p-3 rounded-lg border border-green-100 group-hover:bg-green-100 transition-colors">
-                    {result.cbtFeedback.alternative}
-                  </p>
-                </div>
-              </div>
+              </CardContent>
+            </Card>
+
+            {/* 액션 버튼 */}
+            <div className="flex space-x-4">
+              <Button
+                variant="secondary"
+                onClick={onNewAnalysis}
+                className="flex-1"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                새로운 분석
+              </Button>
+              <Button
+                variant="primary"
+                onClick={onClose}
+                className="flex-1"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                확인
+              </Button>
             </div>
-          </div>
-        )}
-
-        {/* 액션 버튼 */}
-        <div className="flex space-x-4">
-          <Button
-            onClick={onNewAnalysis}
-            className={`flex-1 bg-gradient-to-r ${colors.gradient} text-white hover:shadow-lg transform hover:scale-105 transition-all duration-200`}
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            새로운 분석
-          </Button>
-          <Button
-            onClick={onClose}
-            variant="outline"
-            className="flex-1 hover:bg-gray-50"
-          >
-            닫기
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 상담 세션 관리 컴포넌트
-function SessionManager({ 
-  sessionState, 
-  onStartSession, 
-  onEndSession,
-  sessionDuration 
-}: { 
-  sessionState: SessionState;
-  onStartSession: () => void;
-  onEndSession: () => void;
-  sessionDuration: number;
-}) {
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-      <div className="text-center space-y-4">
-        <div className="flex items-center justify-center space-x-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-            <Brain className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">감정 분석 상담</h3>
-            <p className="text-sm text-gray-600">실시간 멀티모달 감정 분석 세션</p>
           </div>
         </div>
-
-        {sessionState === 'not_started' && (
-          <div className="space-y-4">
-            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-2">상담 안내</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• 카메라와 마이크를 활성화해주세요</li>
-                <li>• 편안한 상태에서 자연스럽게 대화하세요</li>
-                <li>• 상담은 언제든지 종료할 수 있습니다</li>
-                <li>• 분석 결과는 상담 종료 후 확인할 수 있습니다</li>
-              </ul>
-            </div>
-            <Button
-              onClick={onStartSession}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-8 py-3 rounded-full hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-            >
-              <Play className="w-5 h-5 mr-2" />
-              상담 시작하기
-            </Button>
-          </div>
-        )}
-
-        {sessionState === 'active' && (
-          <div className="space-y-4">
-            <div className="bg-green-50 rounded-xl p-4 border border-green-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold text-green-900">상담 진행 중</h4>
-                  <p className="text-sm text-green-700">실시간 감정 분석이 진행되고 있습니다</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-green-600">{formatDuration(sessionDuration)}</div>
-                  <div className="text-xs text-green-500">경과 시간</div>
-                </div>
-              </div>
-            </div>
-            <Button
-              onClick={onEndSession}
-              className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-8 py-3 rounded-full hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-            >
-              <Square className="w-5 h-5 mr-2" />
-              상담 종료하기
-            </Button>
-          </div>
-        )}
-
-        {sessionState === 'completed' && (
-          <div className="space-y-4">
-            <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold text-purple-900">상담 완료</h4>
-                  <p className="text-sm text-purple-700">총 상담 시간: {formatDuration(sessionDuration)}</p>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600">
-              상담 중 수집된 데이터를 바탕으로 감정 분석을 진행합니다...
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -715,410 +539,216 @@ function SessionManager({
 
 export default function AnalysisPage() {
   const { addEmotionAnalysis, setLoading, isLoading } = useAppStore();
-  const [analysisState, setAnalysisState] = useState<AnalysisState>('idle');
-  const [analysisStep, setAnalysisStep] = useState<AnalysisStep>('preparing');
+  const [workflow, setWorkflow] = useState<SimpleWorkflow>('ready');
   const [analysisResult, setAnalysisResult] = useState<EmotionAnalysis | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState('preparing');
   
-  // 시간 포맷 함수
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-  
-  // 세션 관리 상태
-  const [sessionState, setSessionState] = useState<SessionState>('not_started');
-  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
-  const [sessionDuration, setSessionDuration] = useState<number>(0);
-  const [sessionInterval, setSessionInterval] = useState<NodeJS.Timeout | null>(null);
-
   // 클라이언트 사이드 마운트 확인
   useLayoutEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // 세션 시간 업데이트
-  useEffect(() => {
-    if (sessionState === 'active' && sessionStartTime) {
-      const interval = setInterval(() => {
-        setSessionDuration(Math.floor((Date.now() - sessionStartTime) / 1000));
-      }, 1000);
-      setSessionInterval(interval);
-      
-      return () => {
-        clearInterval(interval);
-      };
-    }
-  }, [sessionState, sessionStartTime]);
-
-  // 상담 시작
-  const handleStartSession = () => {
-    setSessionState('active');
-    setSessionStartTime(Date.now());
-    setSessionDuration(0);
-    setAnalysisState('session_active');
-    
-    // 상담 시작 시 카메라와 마이크 권한 요청
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: { ideal: 1280 }, 
-          height: { ideal: 720 },
-          facingMode: 'user'
-        }, 
-        audio: true 
-      }).then(() => {
-        console.log('카메라와 마이크 권한이 허용되었습니다.');
-      }).catch((error) => {
-        console.error('카메라/마이크 권한 거부:', error);
-      });
-    }
-  };
-
-  // 상담 종료
-  const handleEndSession = () => {
-    setSessionState('completed');
-    if (sessionInterval) {
-      clearInterval(sessionInterval);
-      setSessionInterval(null);
-    }
-    
-    // 상담 종료 후 분석 시작
-    handleStartAnalysis();
-  };
-
-  // 새로운 상담 시작
-  const handleNewSession = () => {
-    setSessionState('not_started');
-    setSessionStartTime(null);
-    setSessionDuration(0);
-    setAnalysisState('idle');
-    setAnalysisStep('preparing');
-    setAnalysisResult(null);
-    setShowResult(false);
+  // 분석 시작
+  const handleStartAnalysis = async (data: { text?: string; audioFile?: File; imageFile?: File }) => {
+    setWorkflow('analyzing');
+    setLoading(true);
     setError(null);
-  };
+    setProgress(0);
+    setCurrentStep('preparing');
 
-  const handleStartAnalysis = async () => {
     try {
-      setAnalysisState('analyzing');
-      setLoading(true);
-      setError(null);
+      // 진행률 시뮬레이션 (실제 API 호출 시 제거)
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      // 단계별 진행
+      setTimeout(() => setCurrentStep('analyzing'), 1000);
+      setTimeout(() => setCurrentStep('completed'), 3000);
+
+      // 실제 멀티모달 감정 분석 API 호출
+      let analysisResult: EmotionAnalysis;
       
-      // 분석 단계별 진행 상황 시뮬레이션
-      setAnalysisStep('preparing');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setAnalysisStep('analyzing_text');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setAnalysisStep('analyzing_voice');
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setAnalysisStep('analyzing_facial');
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setAnalysisStep('generating_feedback');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // 다양한 감정 상태를 시뮬레이션하기 위한 텍스트 샘플들
-      const textSamples = [
-        {
-          text: "오늘 정말 기분이 좋아요. 새로운 일을 시작하게 되어서 설레고 있어요.",
-          expectedEmotion: "happy",
-          expectedVAD: { valence: 0.8, arousal: 0.7, dominance: 0.6 }
-        },
-        {
-          text: "요즘 스트레스가 많아서 힘들어요. 아무것도 하고 싶지 않아요.",
-          expectedEmotion: "sad",
-          expectedVAD: { valence: 0.2, arousal: 0.3, dominance: 0.4 }
-        },
-        {
-          text: "화가 나서 참을 수가 없어요. 이런 상황이 계속되면 어떻게 해야 할지 모르겠어요.",
-          expectedEmotion: "angry",
-          expectedVAD: { valence: 0.1, arousal: 0.9, dominance: 0.3 }
-        },
-        {
-          text: "갑자기 놀라운 일이 생겨서 당황스러워요. 어떻게 대처해야 할지 막막해요.",
-          expectedEmotion: "surprised",
-          expectedVAD: { valence: 0.4, arousal: 0.8, dominance: 0.2 }
-        },
-        {
-          text: "평온한 상태예요. 차분하게 생각할 수 있어서 좋아요.",
-          expectedEmotion: "neutral",
-          expectedVAD: { valence: 0.6, arousal: 0.3, dominance: 0.7 }
-        },
-        {
-          text: "자신감이 생겼어요. 이번에는 꼭 성공할 것 같아요.",
-          expectedEmotion: "happy",
-          expectedVAD: { valence: 0.9, arousal: 0.6, dominance: 0.8 }
-        },
-        {
-          text: "걱정이 많아서 잠을 잘 못 자고 있어요. 미래가 불안해요.",
-          expectedEmotion: "sad",
-          expectedVAD: { valence: 0.3, arousal: 0.7, dominance: 0.2 }
-        },
-        {
-          text: "기쁨과 설렘으로 가득해요. 오랫동안 기다려온 순간이에요.",
-          expectedEmotion: "happy",
-          expectedVAD: { valence: 0.9, arousal: 0.8, dominance: 0.7 }
-        },
-        {
-          text: "조금 우울해요. 혼자 있고 싶어요.",
-          expectedEmotion: "sad",
-          expectedVAD: { valence: 0.2, arousal: 0.2, dominance: 0.3 }
-        },
-        {
-          text: "열정이 넘쳐요. 새로운 도전을 시작하고 싶어요.",
-          expectedEmotion: "happy",
-          expectedVAD: { valence: 0.8, arousal: 0.9, dominance: 0.8 }
-        }
-      ];
-      
-      // 랜덤하게 텍스트 선택
-      const selectedSample = textSamples[Math.floor(Math.random() * textSamples.length)];
-      
-      // 실제 감정 분석 API 호출
-      const apiResponse: any = await apiService.analyzeMultimodalEmotion({
-        text: selectedSample.text,
-        sessionId: `session_${Date.now()}`
-      });
-      
-      // 백엔드 응답을 프론트엔드 형식으로 변환
-      const result: EmotionAnalysis = {
-        id: Date.now().toString(),
-        userId: 'user123',
-        emotion: apiResponse.emotion || 'neutral',
-        confidence: apiResponse.confidence || 0.5,
-        vadScore: {
-          valence: apiResponse.vadScore?.valence || 0.5,
-          arousal: apiResponse.vadScore?.arousal || 0.5,
-          dominance: apiResponse.vadScore?.dominance || 0.5
-        },
-        cbtFeedback: generateCBTFeedback(apiResponse.emotion || 'neutral'),
-        timestamp: new Date().toISOString(),
-        mediaType: 'realtime',
-        textContent: selectedSample.text
-      };
-      
-      setAnalysisStep('completed');
-      setAnalysisResult(result);
-      addEmotionAnalysis(result);
-      setAnalysisState('completed');
+      try {
+        analysisResult = await emotionRepository.analyzeMultimodalEmotion({
+          text: data.text,
+          audioFile: data.audioFile,
+          imageFile: data.imageFile,
+          sessionId: 'test-session'
+        });
+      } catch (error) {
+        // API 호출 실패 시 모의 데이터 사용
+        console.warn('API 호출 실패, 모의 데이터 사용:', error);
+        analysisResult = {
+          id: `analysis_${Date.now()}`,
+          userId: 'user123',
+          emotion: 'happy',
+          confidence: 0.85,
+          vadScore: {
+            valence: 0.7,
+            arousal: 0.5,
+            dominance: 0.6
+          },
+          timestamp: new Date().toISOString(),
+          mediaType: 'text',
+          cbtFeedback: {
+            cognitiveDistortion: '과도한 낙관주의',
+            challenge: '현재의 긍정적인 감정을 유지하면서도 현실적인 계획을 세워보세요.',
+            alternative: '기쁨을 유지하면서도 앞으로의 도전에 대비할 수 있습니다.',
+            actionPlan: '긍정적인 감정을 기록하고, 이를 어려운 시기에 활용해보세요.'
+          }
+        };
+      }
+
+      setAnalysisResult(analysisResult);
+      addEmotionAnalysis(analysisResult);
+      setWorkflow('result');
       setShowResult(true);
+      
+      clearInterval(progressInterval);
     } catch (error) {
-      console.error('감정 분석 실패:', error);
-      setError(error instanceof Error ? error.message : '감정 분석 중 오류가 발생했습니다.');
-      setAnalysisState('error');
+      console.error('분석 실패:', error);
+      setError('분석 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setWorkflow('ready');
     } finally {
       setLoading(false);
     }
   };
 
-  // 감정에 따른 CBT 피드백 생성 함수
-  const generateCBTFeedback = (emotion: string) => {
-    const feedbackMap = {
-      happy: {
-        cognitiveDistortion: '과도한 낙관주의',
-        challenge: '현재의 긍정적인 감정을 유지하면서도 현실적인 계획을 세워보세요.',
-        alternative: '기쁨을 유지하면서도 앞으로의 도전에 대비할 수 있습니다.',
-        actionPlan: '긍정적인 감정을 기록하고, 이를 어려운 시기에 활용해보세요.'
-      },
-      sad: {
-        cognitiveDistortion: '과도한 일반화',
-        challenge: '이 상황이 모든 상황에 적용되는 것은 아닙니다. 구체적으로 어떤 부분이 다른가요?',
-        alternative: '이번 경험은 특별한 경우이며, 앞으로 더 나은 결과를 얻을 수 있습니다.',
-        actionPlan: '작은 성취를 축하하고, 긍정적인 경험을 기록해보세요.'
-      },
-      angry: {
-        cognitiveDistortion: '개인화',
-        challenge: '이 상황이 정말 당신을 겨냥한 것인가요? 다른 가능성은 없나요?',
-        alternative: '상황을 객관적으로 바라보면 다른 해결책을 찾을 수 있습니다.',
-        actionPlan: '깊은 호흡을 하고, 상황을 다시 생각해보는 시간을 가져보세요.'
-      },
-      surprised: {
-        cognitiveDistortion: '재앙화',
-        challenge: '최악의 상황이 정말 일어날 가능성은 얼마나 되나요?',
-        alternative: '놀라운 상황도 새로운 기회가 될 수 있습니다.',
-        actionPlan: '상황을 정리하고, 단계별로 대응 방안을 세워보세요.'
-      },
-      neutral: {
-        cognitiveDistortion: '감정 무시',
-        challenge: '현재 감정을 무시하고 있지는 않나요? 진짜 기분은 어떠신가요?',
-        alternative: '평온함을 유지하면서도 내면의 감정을 인정할 수 있습니다.',
-        actionPlan: '일기를 쓰거나 명상을 통해 내면의 감정을 탐색해보세요.'
-      }
-    };
-
-    return feedbackMap[emotion as keyof typeof feedbackMap] || feedbackMap.neutral;
-  };
-
-  const handleStopAnalysis = () => {
-    setAnalysisState('idle');
-    setAnalysisStep('preparing');
-    setLoading(false);
-    setError(null);
-  };
-
+  // 새로운 분석 시작
   const handleNewAnalysis = () => {
-    setShowResult(false);
+    setWorkflow('ready');
     setAnalysisResult(null);
-    setAnalysisState('idle');
-    setAnalysisStep('preparing');
+    setShowResult(false);
     setError(null);
+    setProgress(0);
+    setCurrentStep('preparing');
   };
 
-  // 서버 사이드 렌더링 중에는 로딩 상태 표시
   if (!isMounted) {
-    return (
-      <Layout>
-        <div className="space-y-8">
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center">
-              <Brain className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">실시간 감정 분석</h1>
-            <p className="text-xl text-gray-600">로딩 중...</p>
-          </div>
-        </div>
-      </Layout>
-    );
+    return null;
   }
 
   return (
-    <Layout>
+    <AnalysisLayout>
       <div className="space-y-8">
         {/* 헤더 */}
-        <div className="text-center py-8">
-          <div className="mb-6">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-600 flex items-center justify-center">
-              <Brain className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-3">
-              실시간 감정 분석
-            </h1>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              웹캠과 마이크를 통해 실시간으로 표정, 음성, 텍스트를 종합하여 정확한 감정을 분석합니다
-            </p>
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-2xl mb-4">
+            <Brain className="w-8 h-8 text-white" />
           </div>
-          
-          {/* 기능 하이라이트 */}
-          <div className="flex justify-center space-x-6">
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <Eye className="w-4 h-4 text-blue-600" />
-              <span>표정 인식</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <Ear className="w-4 h-4 text-blue-600" />
-              <span>음성 분석</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <MessageSquare className="w-4 h-4 text-blue-600" />
-              <span>텍스트 변환</span>
-            </div>
-          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+            {workflow === 'video-call' ? '영상 통화 감정 분석' : '멀티모달 감정 분석'}
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            {workflow === 'video-call' 
+              ? '실시간 화상 통화를 통해 감정을 분석하고 모니터링합니다'
+              : '텍스트, 음성, 이미지를 통합하여 정확한 감정 분석을 제공합니다'
+            }
+          </p>
         </div>
 
         {/* 에러 메시지 */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <span className="text-red-800 font-medium">분석 오류</span>
-            </div>
-            <p className="text-red-700 mt-2">{error}</p>
-            <Button 
-              onClick={handleNewSession}
-              variant="outline" 
-              size="sm" 
-              className="mt-3"
-            >
-              다시 시도
-            </Button>
-          </div>
+          <FeedbackMessage
+            type="error"
+            title="분석 실패"
+            message={error}
+            onAction={handleNewAnalysis}
+            actionText="다시 시도"
+          />
         )}
 
-        {/* 상담 세션 관리 */}
-        {sessionState === 'not_started' && (
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <div className="text-center space-y-4">
-              <div className="flex items-center justify-center space-x-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">감정 분석 상담</h3>
-                  <p className="text-sm text-gray-500">실시간 멀티모달 감정 분석 세션</p>
-                </div>
-              </div>
+        {/* 워크플로우별 컨텐츠 */}
+        {workflow === 'ready' && (
+          <>
+            {/* 분석 모드 선택 */}
+            <Card variant="elevated" hover>
+              <CardHeader>
+                <CardTitle>
+                  <Brain className="w-5 h-5 text-primary" />
+                  <span>분석 모드 선택</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* 멀티모달 분석 모드 */}
+                  <div 
+                    className="p-6 border-2 border-primary/20 rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 group"
+                    onClick={() => setWorkflow('analyzing')}
+                  >
+                    <div className="flex items-center space-x-4 mb-3">
+                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <MessageSquare className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-lg">멀티모달 분석</h3>
+                        <p className="text-sm text-gray-600">텍스트, 음성, 이미지 입력</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center text-primary text-sm font-medium">
+                      <Zap className="w-4 h-4 mr-1" />
+                      고정밀 분석
+                    </div>
+                  </div>
 
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <h4 className="font-medium text-blue-900 mb-2">상담 안내</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• 카메라와 마이크를 활성화해주세요</li>
-                  <li>• 편안한 상태에서 자연스럽게 대화하세요</li>
-                  <li>• 상담은 언제든지 종료할 수 있습니다</li>
-                  <li>• 분석 결과는 상담 종료 후 확인할 수 있습니다</li>
-                </ul>
-              </div>
-              <Button
-                onClick={handleStartSession}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
-              >
-                <Play className="w-4 h-4 mr-2" />
-                상담 시작하기
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* 상담 진행 중 - 비디오 인터페이스 */}
-        {sessionState === 'active' && (
-          <div className="space-y-6">
-            {/* 간소화된 상담 상태 표시 */}
-            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 rounded-full bg-blue-600 animate-pulse"></div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-900">상담 진행 중</h3>
-                    <p className="text-xs text-gray-500">실시간 감정 분석이 진행되고 있습니다</p>
+                  {/* 영상 통화 분석 모드 */}
+                  <div 
+                    className="p-6 border-2 border-accent/20 rounded-xl cursor-pointer hover:border-accent/40 hover:bg-accent/5 transition-all duration-300 group"
+                    onClick={() => setWorkflow('video-call')}
+                  >
+                    <div className="flex items-center space-x-4 mb-3">
+                      <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center group-hover:bg-accent/20 transition-colors">
+                        <Video className="w-6 h-6 text-accent" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-lg">영상 통화 분석</h3>
+                        <p className="text-sm text-gray-600">실시간 화상 감정 분석</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center text-accent text-sm font-medium">
+                      <Activity className="w-4 h-4 mr-1" />
+                      실시간 모니터링
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-semibold text-blue-600">{formatDuration(sessionDuration)}</div>
-                  <div className="text-xs text-gray-500">경과 시간</div>
-                </div>
-              </div>
-            </div>
-            
+              </CardContent>
+            </Card>
+
+            {/* 멀티모달 분석 인터페이스 */}
             <MultimodalAnalysisInterface
-              onStartAnalysis={() => {}} // 상담 중에는 자동으로 분석 진행
-              onStopAnalysis={handleEndSession}
-              isAnalyzing={true}
-              analysisStep="analyzing_text"
-              autoStartMedia={true} // 상담 시작 시 자동으로 미디어 시작
+              onStartAnalysis={handleStartAnalysis}
+              isAnalyzing={false}
+              progress={progress}
+              currentStep={currentStep}
             />
-          </div>
+          </>
         )}
 
-        {/* 상담 완료 후 분석 중 */}
-        {sessionState === 'completed' && analysisState === 'analyzing' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="text-center space-y-4">
-                <div className="w-12 h-12 mx-auto rounded-full bg-blue-600 flex items-center justify-center animate-pulse">
-                  <Brain className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">분석 중...</h3>
-                  <p className="text-sm text-gray-500">상담 데이터를 분석하여 결과를 생성합니다</p>
-                </div>
-              </div>
-            </div>
+        {/* 영상 통화 분석 모드 */}
+        {workflow === 'video-call' && (
+          <div className="h-[600px]">
+            <VideoCallEmotionAnalysis
+              isActive={true}
+              onEmotionChange={(emotion) => {
+                setAnalysisResult(emotion);
+                addEmotionAnalysis(emotion);
+              }}
+              onCallEnd={() => {
+                setWorkflow('ready');
+                setAnalysisResult(null);
+              }}
+            />
           </div>
         )}
 
@@ -1127,10 +757,10 @@ export default function AnalysisPage() {
           <ResultModal
             result={analysisResult}
             onClose={() => setShowResult(false)}
-            onNewAnalysis={handleNewSession}
+            onNewAnalysis={handleNewAnalysis}
           />
         )}
       </div>
-    </Layout>
+    </AnalysisLayout>
   );
 } 

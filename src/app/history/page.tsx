@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layout } from '../../components/layout/Layout';
+import { Navigation } from '../../components/layout/Navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { 
@@ -132,8 +132,10 @@ export default function HistoryPage() {
   const trend = calculateEmotionTrend(filteredHistory);
 
   return (
-    <Layout>
-      <div className="space-y-8">
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-8">
         {/* 헤더 */}
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">감정 히스토리</h1>
@@ -418,7 +420,8 @@ export default function HistoryPage() {
             </Card>
           </>
         )}
-      </div>
-    </Layout>
+        </div>
+      </main>
+    </div>
   );
 } 
