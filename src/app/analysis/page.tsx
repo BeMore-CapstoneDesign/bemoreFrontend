@@ -429,11 +429,11 @@ export default function AnalysisPage() {
             <Brain className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-            {showVideoCall ? '영상 통화 감정 분석' : '멀티모달 감정 분석'}
+            {showVideoCall ? '영상 상담 감정 분석' : '멀티모달 감정 분석'}
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
             {showVideoCall 
-              ? '실시간 화상 통화를 통해 감정을 분석하고 모니터링합니다'
+              ? '실시간 화상 상담을 통해 감정을 분석하고 모니터링합니다'
               : '텍스트, 음성, 이미지를 통합하여 정확한 감정 분석을 제공합니다'
             }
           </p>
@@ -472,7 +472,11 @@ export default function AnalysisPage() {
               }}
               onCallEnd={() => {
                 setShowVideoCall(false);
-                setAnalysisResult(null);
+                // 상담 종료 후 결과 모달 표시
+                if (analysisResult) {
+                  setWorkflow('result');
+                  setShowResult(true);
+                }
               }}
             />
           </div>

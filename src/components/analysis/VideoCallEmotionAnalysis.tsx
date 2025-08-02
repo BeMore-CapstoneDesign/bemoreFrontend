@@ -416,15 +416,33 @@ export default function VideoCallEmotionAnalysis({
     }
   }, []);
 
-  // 통화 종료
+  // 상담 종료
   const endCall = useCallback(() => {
     setCallStatus('ended');
     stopRecordingTimer();
     setIsAnalyzing(false);
+    
+    // 상담 종료 후 분석 결과 생성
+    if (currentEmotion && onEmotionChange) {
+      const finalAnalysis: EmotionAnalysis = {
+        ...currentEmotion,
+        id: `consultation_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        mediaType: 'consultation',
+        cbtFeedback: {
+          cognitiveDistortion: '상담을 통해 감정 상태를 확인했습니다',
+          challenge: '현재 감정 상태를 객관적으로 바라보세요',
+          alternative: '감정 변화는 자연스러운 과정입니다',
+          actionPlan: '정기적인 감정 체크와 상담을 권장합니다'
+        }
+      };
+      onEmotionChange(finalAnalysis);
+    }
+    
     if (onCallEnd) {
       onCallEnd();
     }
-  }, [onCallEnd, stopRecordingTimer]);
+  }, [onCallEnd, stopRecordingTimer, currentEmotion, onEmotionChange]);
 
   // 컴포넌트 마운트 시 미디어 스트림 초기화
   useEffect(() => {
@@ -520,12 +538,12 @@ export default function VideoCallEmotionAnalysis({
         {showGuide && callStatus === 'connected' && (
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-80 text-white px-6 py-4 rounded-xl backdrop-blur-sm max-w-md text-center">
             <div className="space-y-3">
-              <div className="text-lg font-semibold">🎥 영상 통화 감정 분석</div>
+              <div className="text-lg font-semibold">🎥 영상 상담 감정 분석</div>
               <div className="text-sm text-gray-300 space-y-2">
                 <p>• 카메라와 마이크가 활성화되었습니다</p>
                 <p>• "분석 시작" 버튼을 클릭하여 감정 분석을 시작하세요</p>
                 <p>• 분석 중에는 실시간으로 감정이 표시됩니다</p>
-                <p>• 언제든지 "일시정지" 또는 "종료"할 수 있습니다</p>
+                <p>• 언제든지 "일시정지" 또는 "상담 종료"할 수 있습니다</p>
               </div>
               <button
                 onClick={() => setShowGuide(false)}
@@ -609,7 +627,7 @@ export default function VideoCallEmotionAnalysis({
               <span className="text-xs">{isFullscreen ? '전체화면 해제' : '전체화면'}</span>
             </ActionButton>
 
-            {/* 통화 종료 */}
+            {/* 상담 종료 */}
             <ActionButton
               variant="danger"
               size="sm"
@@ -617,7 +635,7 @@ export default function VideoCallEmotionAnalysis({
               className="flex flex-col items-center space-y-1"
             >
               <PhoneOff className="w-4 h-4" />
-              <span className="text-xs">통화 종료</span>
+              <span className="text-xs">상담 종료</span>
             </ActionButton>
           </div>
         </div>
