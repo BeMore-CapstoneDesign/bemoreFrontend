@@ -1,0 +1,347 @@
+# Build and Deployment Rules
+
+## 빌드 및 배포 오류 방지 규칙
+
+### 1. Next.js 빌드 오류 방지
+
+#### **문제: "Could not find a production build" 오류**
+```bash
+# ❌ 잘못된 실행 순서
+npm run start  # 빌드 없이 프로덕션 서버 시작
+
+# ✅ 올바른 실행 순서
+npm run build  # 먼저 빌드
+npm run start  # 그 다음 프로덕션 서버 시작
+```
+
+#### **개발 환경 vs 프로덕션 환경 구분**
+```bash
+# 개발 환경 (개발 중)
+npm run dev     # http://localhost:3005
+
+# 프로덕션 환경 (배포용)
+npm run build   # 빌드 생성
+npm run start   # 프로덕션 서버 시작
+```
+
+#### **빌드 전 체크리스트**
+```bash
+# 1. 의존성 설치 확인
+npm install
+
+# 2. 타입 체크
+npx tsc --noEmit
+
+# 3. 린트 체크
+npm run lint
+
+# 4. 빌드 실행
+npm run build
+
+# 5. 빌드 성공 확인 후 서버 시작
+npm run start
+```
+
+### 2. 빌드 실패 원인 및 해결책
+
+#### **TypeScript 오류로 인한 빌드 실패**
+```typescript
+// ❌ 빌드 실패 원인
+const data: string = 123; // 타입 불일치
+
+// ✅ 해결책
+const data: string = "123"; // 올바른 타입
+```
+
+#### **환경 변수 누락으로 인한 빌드 실패**
+```bash
+# ❌ .env.local 파일 누락
+npm run build  # 환경 변수 오류 발생
+
+# ✅ 해결책
+# .env.local 파일 생성
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_APP_NAME=BeMore
+```
+
+#### **의존성 문제로 인한 빌드 실패**
+```bash
+# ❌ 의존성 충돌
+npm run build  # 모듈을 찾을 수 없음
+
+# ✅ 해결책
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
+### 3. 개발 워크플로우 규칙
+
+#### **일반적인 개발 워크플로우**
+```bash
+# 1. 개발 시작
+npm run dev
+
+# 2. 코드 변경 및 테스트
+# 3. 빌드 테스트 (주기적)
+npm run build
+
+# 4. 프로덕션 테스트
+npm run start
+```
+
+#### **배포 전 워크플로우**
+```bash
+# 1. 현재 상태 커밋
+git add .
+git commit -m "feat: ready for deployment"
+git push
+
+# 2. 빌드 테스트
+npm run build
+
+# 3. 프로덕션 서버 테스트
+npm run start
+
+# 4. 기능 검증
+# 5. 배포 진행
+```
+
+### 4. 스크립트 실행 규칙
+
+#### **package.json 스크립트 이해**
+```json
+{
+  "scripts": {
+    "dev": "next dev --turbopack -p 3005",     // 개발 서버
+    "build": "next build",                      // 프로덕션 빌드
+    "start": "next start -p 3005",              // 프로덕션 서버
+    "lint": "next lint"                         // 코드 검사
+  }
+}
+```
+
+#### **스크립트 실행 순서 규칙**
+```bash
+# 개발 중
+npm run dev     # ✅ 개발 서버 (핫 리로드)
+
+# 배포 전 테스트
+npm run build   # ✅ 빌드 생성
+npm run start   # ✅ 프로덕션 서버
+
+# 코드 품질 검사
+npm run lint    # ✅ 린트 체크
+```
+
+### 5. 오류 예방 체크리스트
+
+#### **빌드 전 체크리스트**
+- [ ] `node_modules` 설치 완료
+- [ ] `.env.local` 파일 존재
+- [ ] TypeScript 오류 없음
+- [ ] ESLint 오류 없음
+- [ ] 모든 import 경로 정확
+- [ ] 환경 변수 설정 완료
+
+#### **배포 전 체크리스트**
+- [ ] 빌드 성공 (`npm run build`)
+- [ ] 프로덕션 서버 정상 시작 (`npm run start`)
+- [ ] 모든 페이지 정상 로드
+- [ ] API 연결 정상
+- [ ] 환경 변수 프로덕션 설정
+- [ ] 성능 최적화 확인
+
+### 6. 자주 발생하는 오류 및 해결책
+
+#### **오류 1: "Could not find a production build"**
+```bash
+# 원인: 빌드 없이 프로덕션 서버 시작
+# 해결책:
+npm run build
+npm run start
+```
+
+#### **오류 2: "Module not found"**
+```bash
+# 원인: 의존성 문제
+# 해결책:
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
+#### **오류 3: "Environment variable not found"**
+```bash
+# 원인: 환경 변수 누락
+# 해결책: .env.local 파일 생성
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_APP_NAME=BeMore
+```
+
+#### **오류 4: "Type error"**
+```bash
+# 원인: TypeScript 타입 오류
+# 해결책:
+npx tsc --noEmit  # 타입 체크
+# 오류 수정 후
+npm run build
+```
+
+### 7. 개발 환경 최적화
+
+#### **캐시 관리**
+```bash
+# 빌드 캐시 클리닝
+rm -rf .next
+
+# 의존성 캐시 클리닝
+rm -rf node_modules/.cache
+
+# 전체 클리닝
+rm -rf .next node_modules package-lock.json
+npm install
+```
+
+#### **포트 관리**
+```bash
+# 포트 충돌 해결
+lsof -ti:3005 | xargs kill -9
+
+# 다른 포트 사용
+npm run dev -- -p 3006
+```
+
+### 8. CI/CD 파이프라인 규칙
+
+#### **GitHub Actions 예시**
+```yaml
+name: Build and Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      - run: npm install
+      - run: npm run build  # 빌드 필수
+      - run: npm run start & sleep 10  # 서버 테스트
+```
+
+### 9. 디버깅 가이드
+
+#### **빌드 실패 디버깅**
+```bash
+# 1. 상세 로그 확인
+npm run build --verbose
+
+# 2. 타입 체크
+npx tsc --noEmit
+
+# 3. 린트 체크
+npm run lint
+
+# 4. 의존성 확인
+npm ls
+
+# 5. 캐시 클리닝
+rm -rf .next
+```
+
+#### **프로덕션 서버 디버깅**
+```bash
+# 1. 빌드 확인
+ls -la .next/
+
+# 2. 환경 변수 확인
+echo $NODE_ENV
+
+# 3. 포트 확인
+lsof -i :3005
+
+# 4. 로그 확인
+npm run start 2>&1 | tee server.log
+```
+
+### 10. 성능 최적화
+
+#### **빌드 성능 최적화**
+```bash
+# 1. 빌드 시간 측정
+time npm run build
+
+# 2. 번들 크기 분석
+npm run build
+# 결과에서 Route Size 확인
+
+# 3. 불필요한 의존성 제거
+npm prune
+```
+
+#### **프로덕션 성능 최적화**
+```bash
+# 1. 압축 확인
+gzip -t .next/static/**/*.js
+
+# 2. 이미지 최적화
+# Next.js Image 컴포넌트 사용
+
+# 3. 코드 분할 확인
+# 동적 import 활용
+```
+
+### 11. 보안 고려사항
+
+#### **환경 변수 보안**
+```bash
+# ❌ 민감한 정보 노출
+NEXT_PUBLIC_DATABASE_PASSWORD=secret
+
+# ✅ 안전한 환경 변수
+NEXT_PUBLIC_API_URL=https://api.example.com
+# 민감한 정보는 서버 사이드에서만 사용
+```
+
+#### **빌드 보안**
+```bash
+# 1. 의존성 보안 검사
+npm audit
+
+# 2. 취약점 수정
+npm audit fix
+
+# 3. 정기적 업데이트
+npm update
+```
+
+### 12. 모니터링 및 로깅
+
+#### **빌드 모니터링**
+```bash
+# 빌드 성공률 추적
+npm run build && echo "Build successful" || echo "Build failed"
+
+# 빌드 시간 추적
+time npm run build
+```
+
+#### **프로덕션 모니터링**
+```bash
+# 서버 상태 확인
+curl -f http://localhost:3005 || echo "Server down"
+
+# 메모리 사용량 확인
+ps aux | grep next
+```
+
+이 규칙들을 준수하면 빌드 및 배포 관련 오류를 크게 줄일 수 있습니다.
+description:
+globs:
+alwaysApply: false
+---

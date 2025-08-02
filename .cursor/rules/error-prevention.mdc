@@ -139,6 +139,56 @@ Module parse failed: Identifier 'toggleAnalysis' has already been declared
 - 함수명 중복 검사
 - 단계별 빌드 테스트
 
+### 6. Next.js 빌드 오류 (Could not find a production build)
+
+**증상:**
+```
+Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server.
+```
+
+**원인:**
+- 빌드 없이 프로덕션 서버 시작
+- `.next` 디렉토리 누락 또는 손상
+- 잘못된 스크립트 실행 순서
+
+**해결책:**
+```bash
+# 1. 빌드 실행
+npm run build
+
+# 2. 빌드 성공 확인 후 서버 시작
+npm run start
+```
+
+**예방 규칙:**
+- 항상 `npm run build` 후 `npm run start` 실행
+- 개발 중에는 `npm run dev` 사용
+- 배포 전 빌드 테스트 필수
+
+### 7. 환경 변수 오류
+
+**증상:**
+```
+Error: Environment variable not found
+```
+
+**원인:**
+- `.env.local` 파일 누락
+- 환경 변수 이름 오타
+- `NEXT_PUBLIC_` 접두사 누락
+
+**해결책:**
+```bash
+# .env.local 파일 생성
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_APP_NAME=BeMore
+```
+
+**예방 규칙:**
+- 프로젝트 시작 시 `.env.local` 파일 생성
+- 환경 변수 이름 정확히 입력
+- 클라이언트 사이드 변수는 `NEXT_PUBLIC_` 접두사 필수
+
 ## 종합 예방 전략
 
 ### 개발 워크플로우 규칙
@@ -232,6 +282,23 @@ Module parse failed: Identifier 'toggleAnalysis' has already been declared
 3. **포트 충돌 확인**
 4. **브라우저 캐시 완전 삭제**
 5. **다른 브라우저에서 테스트**
+
+### 빌드 관련 추가 조치:
+
+1. **빌드 전 체크:**
+   - `npm install` 완료 확인
+   - `.env.local` 파일 존재 확인
+   - TypeScript 오류 없음 확인
+
+2. **빌드 실패 시:**
+   - `npm run build --verbose` 상세 로그 확인
+   - `npx tsc --noEmit` 타입 체크
+   - `npm run lint` 린트 체크
+
+3. **프로덕션 배포 전:**
+   - `npm run build` 성공 확인
+   - `npm run start` 서버 정상 시작 확인
+   - 모든 페이지 정상 로드 확인
 
 이러한 규칙들을 준수하면 반복적 오류 발생을 크게 줄일 수 있습니다.
 description:
