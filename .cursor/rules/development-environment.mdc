@@ -1,0 +1,214 @@
+# Development Environment Rules
+
+## 개발 환경 최적화 규칙
+
+### 1. Next.js 개발 서버 설정
+
+**권장 설정:**
+```bash
+# package.json scripts
+"dev": "next dev --turbopack -p 3005",
+"build": "next build",
+"start": "next start -p 3005"
+```
+
+**포트 관리:**
+- 기본 포트: 3005
+- 포트 충돌 시: `lsof -ti:3005 | xargs kill -9`
+- 포트 변경 시: `-p [PORT_NUMBER]`
+
+### 2. 캐시 관리 전략
+
+**정기 클리닝 스케줄:**
+```bash
+# 일일 개발 시작 시
+rm -rf .next
+
+# 주간 정기 클리닝
+rm -rf .next node_modules/.cache
+npm install
+
+# 월간 전체 클리닝
+rm -rf .next node_modules package-lock.json
+npm install
+```
+
+**개발 중 캐시 문제 해결:**
+```bash
+# 즉시 실행 스크립트
+pkill -f "next dev"
+sleep 2
+rm -rf .next node_modules/.cache
+lsof -ti:3005 | xargs kill -9
+npm run dev
+```
+
+### 3. 브라우저 개발 설정
+
+**Chrome 개발자 도구 설정:**
+- Network 탭: "Disable cache" 체크
+- Console 탭: "Preserve log" 체크
+- Sources 탭: "Pause on uncaught exceptions" 체크
+
+**브라우저 캐시 관리:**
+- 개발 중 하드 리프레시 사용 (Cmd+Shift+R)
+- 개발자 도구에서 캐시 비활성화
+- 정기적인 브라우저 캐시 삭제
+
+### 4. 코드 품질 관리
+
+**TypeScript 설정:**
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true
+  }
+}
+```
+
+**ESLint 설정:**
+```json
+// eslint.config.mjs
+{
+  "rules": {
+    "react-hooks/exhaustive-deps": "error",
+    "react-hooks/rules-of-hooks": "error"
+  }
+}
+```
+
+### 5. Git 워크플로우
+
+**커밋 전 체크리스트:**
+```bash
+# 1. 빌드 테스트
+npm run build
+
+# 2. 타입 체크
+npx tsc --noEmit
+
+# 3. 린트 체크
+npm run lint
+
+# 4. 커밋
+git add .
+git commit -m "feat: description"
+git push
+```
+
+**브랜치 관리:**
+- main: 프로덕션 준비 코드
+- develop: 개발 중인 기능
+- feature/*: 개별 기능 개발
+- hotfix/*: 긴급 수정
+
+### 6. 성능 모니터링
+
+**개발 중 성능 체크:**
+```bash
+# 번들 크기 분석
+npm run build
+# 결과 확인: Route (app) Size
+
+# 개발 서버 성능
+npm run dev
+# 컴파일 시간 모니터링
+```
+
+**브라우저 성능 도구:**
+- React DevTools: 컴포넌트 렌더링 분석
+- Performance 탭: 메모리 누수 확인
+- Network 탭: API 호출 최적화
+
+### 7. 오류 추적 및 디버깅
+
+**오류 로깅 설정:**
+```typescript
+// 개발 환경 로깅
+if (process.env.NODE_ENV === 'development') {
+  console.log('Debug info:', data);
+}
+
+// 오류 경계 설정
+class ErrorBoundary extends React.Component {
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught:', error, errorInfo);
+  }
+}
+```
+
+**디버깅 도구:**
+- React DevTools
+- Redux DevTools (상태 관리 시)
+- Network 탭 (API 디버깅)
+- Console 탭 (로직 디버깅)
+
+### 8. 환경 변수 관리
+
+**환경 변수 설정:**
+```bash
+# .env.local
+NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_APP_NAME=BeMore
+```
+
+**환경별 설정:**
+- .env.local: 로컬 개발
+- .env.development: 개발 서버
+- .env.production: 프로덕션
+
+### 9. 의존성 관리
+
+**패키지 업데이트 전략:**
+```bash
+# 보안 업데이트 확인
+npm audit
+
+# 의존성 업데이트
+npm update
+
+# 메이저 버전 업데이트 시
+npm install package@latest
+```
+
+**의존성 충돌 해결:**
+```bash
+# node_modules 재설치
+rm -rf node_modules package-lock.json
+npm install
+
+# 캐시 클리닝
+npm cache clean --force
+```
+
+### 10. 배포 준비
+
+**프로덕션 빌드 체크:**
+```bash
+# 빌드 테스트
+npm run build
+
+# 프로덕션 서버 테스트
+npm run start
+
+# 성능 체크
+npm run build
+# First Load JS 크기 확인
+```
+
+**배포 전 체크리스트:**
+- [ ] 빌드 성공
+- [ ] 타입 체크 통과
+- [ ] 린트 오류 없음
+- [ ] 기능 테스트 완료
+- [ ] 성능 최적화 확인
+
+이러한 규칙들을 준수하면 안정적이고 효율적인 개발 환경을 유지할 수 있습니다.
+description:
+globs:
+alwaysApply: false
+---
