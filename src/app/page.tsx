@@ -40,7 +40,7 @@ export default function HomePage() {
   
   // 오늘의 감정 요약 데이터
   const todayEmotion = {
-    primary: currentEmotion?.emotion || 'neutral',
+    primary: currentEmotion || 'neutral',
     count: currentSession?.emotionHistory.length || 0,
     averageValence: currentSession?.emotionHistory.length > 0 
       ? currentSession.emotionHistory.reduce((sum, item) => sum + item.vadScore.valence, 0) / currentSession.emotionHistory.length

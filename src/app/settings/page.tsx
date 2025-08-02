@@ -489,7 +489,7 @@ export default function SettingsPage() {
                 <LogOut className="w-4 h-4 mr-2" />
                 로그아웃
               </Button>
-              <Button variant="danger" onClick={handleDeleteAccount} className="flex-1">
+              <Button variant="outline" onClick={handleDeleteAccount} className="flex-1 text-red-600 border-red-600 hover:bg-red-600 hover:text-white">
                 <Trash2 className="w-4 h-4 mr-2" />
                 계정 삭제
               </Button>

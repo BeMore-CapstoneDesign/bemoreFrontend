@@ -246,8 +246,8 @@ export default function RealTimeVoiceAnalysis({
           <div className="flex justify-center">
             <Button
               onClick={toggleRecording}
-              variant={isRecording ? 'danger' : 'primary'}
-              className="px-6"
+              variant={isRecording ? 'outline' : 'primary'}
+              className={`px-6 ${isRecording ? 'text-red-600 border-red-600 hover:bg-red-600 hover:text-white' : ''}`}
             >
               {isRecording ? (
                 <>

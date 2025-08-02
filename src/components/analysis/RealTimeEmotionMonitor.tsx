@@ -121,7 +121,8 @@ export default function RealTimeEmotionMonitor({
               <span>실시간 감정 모니터링</span>
             </div>
             <Button
-              variant={isMonitoring ? 'danger' : 'primary'}
+              variant={isMonitoring ? 'outline' : 'primary'}
+              className={isMonitoring ? 'text-red-600 border-red-600 hover:bg-red-600 hover:text-white' : ''}
               size="sm"
               onClick={toggleMonitoring}
             >

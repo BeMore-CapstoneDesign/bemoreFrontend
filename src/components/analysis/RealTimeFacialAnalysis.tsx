@@ -261,8 +261,8 @@ export default function RealTimeFacialAnalysis({
           <div className="flex justify-center">
             <Button
               onClick={toggleAnalysis}
-              variant={isAnalyzing ? 'danger' : 'primary'}
-              className="px-6"
+              variant={isAnalyzing ? 'outline' : 'primary'}
+              className={`px-6 ${isAnalyzing ? 'text-red-600 border-red-600 hover:bg-red-600 hover:text-white' : ''}`}
             >
               <Camera className="w-4 h-4 mr-2" />
               {isAnalyzing ? '분석 중지' : '분석 시작'}
