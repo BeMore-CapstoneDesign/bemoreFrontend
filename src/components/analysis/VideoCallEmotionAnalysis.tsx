@@ -360,7 +360,7 @@ export default function VideoCallEmotionAnalysis({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAnalyzing, isAudioOn, isVideoOn, onEmotionChange]);
+  }, [isAnalyzing, isAudioOn, isVideoOn]);
 
   // 분석 토글
   const toggleAnalysis = useCallback(() => {
