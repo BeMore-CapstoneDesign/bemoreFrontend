@@ -348,27 +348,24 @@ function MultimodalAnalysisInterface({
         </Card>
       )}
 
-      {/* 시작 버튼들 */}
+      {/* 통합된 시작 버튼 */}
       {!isAnalyzing && (
-        <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+        <div className="flex justify-center pt-4">
           <Button
             variant="gradient"
             size="xl"
-            onClick={handleStartAnalysis}
-            disabled={!textInput.trim() && !audioFile && !imageFile}
-            icon={<Brain className="w-5 h-5" />}
+            onClick={() => {
+              // 입력된 내용이 있으면 멀티모달 분석, 없으면 영상 통화 분석
+              if (textInput.trim() || audioFile || imageFile) {
+                handleStartAnalysis();
+              } else {
+                onVideoCall();
+              }
+            }}
+            icon={textInput.trim() || audioFile || imageFile ? <Brain className="w-5 h-5" /> : <Video className="w-5 h-5" />}
             className="px-12 py-4 text-lg font-semibold"
           >
-            멀티모달 감정 분석 시작
-          </Button>
-          <Button
-            variant="outline"
-            size="xl"
-            onClick={onVideoCall}
-            icon={<Video className="w-5 h-5" />}
-            className="px-12 py-4 text-lg font-semibold border-accent text-accent hover:bg-accent hover:text-white"
-          >
-            영상 통화 분석 시작
+            {textInput.trim() || audioFile || imageFile ? '멀티모달 분석 시작' : '영상 통화 분석 시작'}
           </Button>
         </div>
       )}
