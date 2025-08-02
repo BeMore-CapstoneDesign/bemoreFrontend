@@ -94,12 +94,6 @@ function MultimodalAnalysisInterface({
   onVideoCall: () => void;
 }) {
   const [textInput, setTextInput] = useState('');
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [showCamera, setShowCamera] = useState(false);
-  const [showMicrophone, setShowMicrophone] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const steps = [
     { key: 'preparing', label: '준비 중' },
@@ -108,219 +102,34 @@ function MultimodalAnalysisInterface({
   ];
 
   const handleStartAnalysis = async () => {
-    // 최소한 하나의 입력이 있어야 함
-    if (!textInput.trim() && !audioFile && !imageFile) {
-      alert('텍스트, 음성, 또는 이미지 중 하나 이상을 입력해주세요.');
-      return;
-    }
-
-    // 권한 요청
-    if (audioFile || showMicrophone) {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        setShowMicrophone(true);
-      } catch (error) {
-        console.error('음성 권한 거부:', error);
-      }
-    }
-    
-    if (imageFile || showCamera) {
-      try {
-        await navigator.mediaDevices.getUserMedia({ video: true });
-        setShowCamera(true);
-      } catch (error) {
-        console.error('카메라 권한 거부:', error);
-      }
-    }
-    
     onStartAnalysis({
-      text: textInput.trim() || undefined,
-      audioFile: audioFile || undefined,
-      imageFile: imageFile || undefined
+      text: textInput.trim() || undefined
     });
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'audio' | 'image') => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (type === 'audio') {
-        setAudioFile(file);
-      } else {
-        setImageFile(file);
-      }
-    }
-  };
-
-  const removeFile = (type: 'audio' | 'image') => {
-    if (type === 'audio') {
-      setAudioFile(null);
-    } else {
-      setImageFile(null);
-    }
   };
 
   return (
     <div className="space-y-8">
-      {/* 텍스트 입력 */}
+      {/* 간단한 텍스트 입력 */}
       <Card variant="elevated" hover>
         <CardHeader>
           <CardTitle>
             <MessageSquare className="w-5 h-5 text-primary" />
-            <span>텍스트 입력</span>
+            <span>감정 분석할 내용</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <textarea
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
-            placeholder="감정을 분석할 텍스트를 입력하세요... (선택사항)"
+            placeholder="분석하고 싶은 텍스트를 입력하거나, 빈 상태로 두면 영상 통화 분석을 시작합니다..."
             className="w-full h-32 p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
             disabled={isAnalyzing}
           />
+          <p className="mt-2 text-sm text-gray-500">
+            텍스트를 입력하면 멀티모달 분석, 빈 상태로 두면 영상 통화 분석이 시작됩니다.
+          </p>
         </CardContent>
       </Card>
-
-      {/* 음성 입력 */}
-      <Card variant="elevated" hover>
-        <CardHeader>
-          <CardTitle>
-            <Volume2 className="w-5 h-5 text-accent" />
-            <span>음성 입력</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {audioFile ? (
-              <div className="flex items-center justify-between p-4 bg-accent/10 border border-accent/20 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Volume2 className="w-5 h-5 text-accent" />
-                  <span className="text-sm text-accent-dark font-medium">{audioFile.name}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeFile('audio')}
-                  icon={<X className="w-4 h-4" />}
-                >
-                  제거
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-4">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="audio/*"
-                  onChange={(e) => handleFileUpload(e, 'audio')}
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isAnalyzing}
-                  icon={<Upload className="w-4 h-4" />}
-                >
-                  음성 파일 업로드
-                </Button>
-                <span className="text-sm text-gray-500">또는</span>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowMicrophone(true)}
-                  disabled={isAnalyzing}
-                  icon={<Volume2 className="w-4 h-4" />}
-                >
-                  실시간 녹음
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 이미지 입력 */}
-      <Card variant="elevated" hover>
-        <CardHeader>
-          <CardTitle>
-            <Camera className="w-5 h-5 text-purple-600" />
-            <span>이미지 입력</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {imageFile ? (
-              <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Camera className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm text-purple-800 font-medium">{imageFile.name}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeFile('image')}
-                  icon={<X className="w-4 h-4" />}
-                >
-                  제거
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-4">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileUpload(e, 'image')}
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isAnalyzing}
-                  icon={<Upload className="w-4 h-4" />}
-                >
-                  이미지 파일 업로드
-                </Button>
-                <span className="text-sm text-gray-500">또는</span>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowCamera(true)}
-                  disabled={isAnalyzing}
-                  icon={<Camera className="w-4 h-4" />}
-                >
-                  실시간 촬영
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 미디어 상태 표시 */}
-      {(showCamera || showMicrophone) && (
-        <Card variant="gradient">
-          <CardHeader>
-            <CardTitle>
-              <Activity className="w-5 h-5 text-accent" />
-              <span>미디어 상태</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-4">
-              {showCamera && (
-                <div className="flex items-center space-x-2 text-accent">
-                  <Camera className="w-5 h-5" />
-                  <span className="font-medium">카메라 활성화</span>
-                </div>
-              )}
-              {showMicrophone && (
-                <div className="flex items-center space-x-2 text-accent">
-                  <Volume2 className="w-5 h-5" />
-                  <span className="font-medium">마이크 활성화</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* 분석 진행률 */}
       {isAnalyzing && (
@@ -342,7 +151,7 @@ function MultimodalAnalysisInterface({
               step={currentStep === 'preparing' ? '분석 준비 중...' : 
                     currentStep === 'analyzing' ? '감정 분석 중...' : 
                     '분석 완료'}
-              description="AI가 멀티모달 데이터를 분석하고 있습니다"
+              description="AI가 데이터를 분석하고 있습니다"
             />
           </CardContent>
         </Card>
@@ -356,16 +165,16 @@ function MultimodalAnalysisInterface({
             size="xl"
             onClick={() => {
               // 입력된 내용이 있으면 멀티모달 분석, 없으면 영상 통화 분석
-              if (textInput.trim() || audioFile || imageFile) {
+              if (textInput.trim()) {
                 handleStartAnalysis();
               } else {
                 onVideoCall();
               }
             }}
-            icon={textInput.trim() || audioFile || imageFile ? <Brain className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+            icon={textInput.trim() ? <Brain className="w-5 h-5" /> : <Video className="w-5 h-5" />}
             className="px-12 py-4 text-lg font-semibold"
           >
-            {textInput.trim() || audioFile || imageFile ? '멀티모달 분석 시작' : '영상 통화 분석 시작'}
+            {textInput.trim() ? '멀티모달 분석 시작' : '영상 통화 분석 시작'}
           </Button>
         </div>
       )}
