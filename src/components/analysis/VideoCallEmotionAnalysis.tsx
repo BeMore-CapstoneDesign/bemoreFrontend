@@ -47,16 +47,51 @@ export default function VideoCallEmotionAnalysis({
   const [error, setError] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   
+  // 사용자 친화적인 상태 관리
+  const [callStatus, setCallStatus] = useState<'connecting' | 'connected' | 'analyzing' | 'paused' | 'ended'>('connecting');
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [showGuide, setShowGuide] = useState(true);
+  const [permissionGranted, setPermissionGranted] = useState(false);
+  
   // 실시간 분석 상태
   const [facialVAD, setFacialVAD] = useState<VADScore>({ valence: 0.5, arousal: 0.5, dominance: 0.5 });
   const [voiceVAD, setVoiceVAD] = useState<VADScore>({ valence: 0.5, arousal: 0.5, dominance: 0.5 });
   const [confidence, setConfidence] = useState(0);
 
   const animationFrameRef = useRef<number | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 녹화 타이머 시작
+  const startRecordingTimer = useCallback(() => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+    }
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingTime(prev => prev + 1);
+    }, 1000);
+  }, []);
+
+  // 녹화 타이머 정지
+  const stopRecordingTimer = useCallback(() => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+  }, []);
+
+  // 시간 포맷팅
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // 미디어 스트림 초기화
   const initializeMediaStream = useCallback(async () => {
     try {
+      setCallStatus('connecting');
+      setError(null);
+      
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280 },
@@ -71,6 +106,8 @@ export default function VideoCallEmotionAnalysis({
       });
 
       setStream(mediaStream);
+      setPermissionGranted(true);
+      setCallStatus('connected');
       
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -91,7 +128,8 @@ export default function VideoCallEmotionAnalysis({
       return true;
     } catch (err) {
       console.error('미디어 스트림 초기화 실패:', err);
-      setError('카메라나 마이크에 접근할 수 없습니다.');
+      setError('카메라나 마이크에 접근할 수 없습니다. 권한을 확인해주세요.');
+      setCallStatus('ended');
       return false;
     }
   }, []);
@@ -237,59 +275,7 @@ export default function VideoCallEmotionAnalysis({
     return (facialConfidence * 0.6 + voiceConfidence * 0.4);
   };
 
-  // 분석 시작/중지
-  const toggleAnalysis = useCallback(() => {
-    setIsAnalyzing(prev => !prev);
-  }, []);
 
-  // 비디오 토글
-  const toggleVideo = useCallback(() => {
-    if (stream) {
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoOn(videoTrack.enabled);
-      }
-    }
-  }, [stream]);
-
-  // 오디오 토글
-  const toggleAudio = useCallback(() => {
-    if (stream) {
-      const audioTrack = stream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsAudioOn(audioTrack.enabled);
-      }
-    }
-  }, [stream]);
-
-  // 전체화면 토글
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      videoRef.current?.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  }, []);
-
-  // 통화 종료
-  const endCall = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-    }
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    if (onCallEnd) {
-      onCallEnd();
-    }
-  }, [stream, onCallEnd]);
 
   // 컴포넌트 마운트 시 초기화
   useEffect(() => {
@@ -376,9 +362,81 @@ export default function VideoCallEmotionAnalysis({
     };
   }, [isAnalyzing, isAudioOn, isVideoOn, onEmotionChange]);
 
+  // 분석 토글
+  const toggleAnalysis = useCallback(() => {
+    if (!permissionGranted) {
+      setError('먼저 카메라와 마이크 권한을 허용해주세요.');
+      return;
+    }
+
+    setIsAnalyzing(prev => {
+      const newState = !prev;
+      if (newState) {
+        setCallStatus('analyzing');
+        startRecordingTimer();
+        setShowGuide(false);
+      } else {
+        setCallStatus('paused');
+        stopRecordingTimer();
+      }
+      return newState;
+    });
+  }, [permissionGranted, startRecordingTimer, stopRecordingTimer]);
+
+  // 비디오 토글
+  const toggleVideo = useCallback(() => {
+    if (stream) {
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !isVideoOn;
+        setIsVideoOn(!isVideoOn);
+      }
+    }
+  }, [stream, isVideoOn]);
+
+  // 오디오 토글
+  const toggleAudio = useCallback(() => {
+    if (stream) {
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !isAudioOn;
+        setIsAudioOn(!isAudioOn);
+      }
+    }
+  }, [stream, isAudioOn]);
+
+  // 전체화면 토글
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  }, []);
+
+  // 통화 종료
+  const endCall = useCallback(() => {
+    setCallStatus('ended');
+    stopRecordingTimer();
+    setIsAnalyzing(false);
+    if (onCallEnd) {
+      onCallEnd();
+    }
+  }, [onCallEnd, stopRecordingTimer]);
+
+  // 컴포넌트 마운트 시 미디어 스트림 초기화
+  useEffect(() => {
+    if (isActive) {
+      initializeMediaStream();
+    }
+  }, [isActive, initializeMediaStream]);
+
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
+      stopRecordingTimer();
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -393,7 +451,7 @@ export default function VideoCallEmotionAnalysis({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [stream]);
+  }, [stream, stopRecordingTimer]);
 
   if (!isActive) {
     return null;
@@ -415,50 +473,107 @@ export default function VideoCallEmotionAnalysis({
           className="absolute inset-0 w-full h-full pointer-events-none"
         />
         
-        {/* 오버레이 정보 */}
-        <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <Activity className="w-4 h-4" />
-            <span className="text-sm">
-              {isAnalyzing ? '실시간 분석 중' : '대기 중'}
-            </span>
+        {/* 상태 표시 오버레이 */}
+        <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white px-4 py-3 rounded-xl backdrop-blur-sm">
+          <div className="flex items-center space-x-3">
+            <div className={`w-3 h-3 rounded-full ${
+              callStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' :
+              callStatus === 'connected' ? 'bg-green-400' :
+              callStatus === 'analyzing' ? 'bg-red-400 animate-pulse' :
+              callStatus === 'paused' ? 'bg-orange-400' :
+              'bg-gray-400'
+            }`} />
+            <div className="text-sm font-medium">
+              {callStatus === 'connecting' && '연결 중...'}
+              {callStatus === 'connected' && '연결됨'}
+              {callStatus === 'analyzing' && '분석 중'}
+              {callStatus === 'paused' && '일시정지'}
+              {callStatus === 'ended' && '종료됨'}
+            </div>
           </div>
+          {isAnalyzing && (
+            <div className="mt-2 text-xs text-gray-300">
+              녹화 시간: {formatTime(recordingTime)}
+            </div>
+          )}
         </div>
 
         {/* 현재 감정 표시 */}
-        {currentEmotion && (
-          <div className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <span className="text-lg">{emotionEmojis[currentEmotion.emotion as keyof typeof emotionEmojis] || '😐'}</span>
+        {currentEmotion && isAnalyzing && (
+          <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-4 py-3 rounded-xl backdrop-blur-sm">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">{emotionEmojis[currentEmotion.emotion as keyof typeof emotionEmojis] || '😐'}</span>
               <div className="text-sm">
-                <div>신뢰도: {Math.round(confidence * 100)}%</div>
+                <div className="font-medium">{currentEmotion.emotion === 'happy' ? '기쁨' : 
+                  currentEmotion.emotion === 'sad' ? '슬픔' :
+                  currentEmotion.emotion === 'angry' ? '분노' :
+                  currentEmotion.emotion === 'surprised' ? '놀람' : '중립'}</div>
                 <div className="text-xs text-gray-300">
-                  V: {Math.round(currentEmotion.vadScore.valence * 100)}% 
-                  A: {Math.round(currentEmotion.vadScore.arousal * 100)}% 
-                  D: {Math.round(currentEmotion.vadScore.dominance * 100)}%
+                  신뢰도: {Math.round(confidence * 100)}%
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* 사용자 가이드 */}
+        {showGuide && callStatus === 'connected' && (
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-80 text-white px-6 py-4 rounded-xl backdrop-blur-sm max-w-md text-center">
+            <div className="space-y-3">
+              <div className="text-lg font-semibold">🎥 영상 통화 감정 분석</div>
+              <div className="text-sm text-gray-300 space-y-2">
+                <p>• 카메라와 마이크가 활성화되었습니다</p>
+                <p>• "분석 시작" 버튼을 클릭하여 감정 분석을 시작하세요</p>
+                <p>• 분석 중에는 실시간으로 감정이 표시됩니다</p>
+                <p>• 언제든지 "일시정지" 또는 "종료"할 수 있습니다</p>
+              </div>
+              <button
+                onClick={() => setShowGuide(false)}
+                className="mt-4 px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark transition-colors"
+              >
+                알겠습니다
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 에러 메시지 */}
         {error && (
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white px-4 py-2 rounded-lg">
-            {error}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white px-6 py-4 rounded-xl max-w-md text-center backdrop-blur-sm">
+            <div className="space-y-2">
+              <div className="text-lg font-semibold">⚠️ 오류 발생</div>
+              <div className="text-sm">{error}</div>
+              <button
+                onClick={() => setError(null)}
+                className="mt-3 px-4 py-2 bg-white text-red-500 rounded-lg text-sm hover:bg-gray-100 transition-colors"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 녹화 상태 표시 */}
+        {isAnalyzing && (
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium animate-pulse">
+              🔴 녹화 중
+            </div>
           </div>
         )}
 
         {/* 컨트롤 바 */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 rounded-full px-6 py-3">
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 rounded-full px-8 py-4 backdrop-blur-sm">
           <div className="flex items-center space-x-4">
             {/* 분석 토글 */}
             <ActionButton
               variant={isAnalyzing ? 'danger' : 'primary'}
               size="sm"
               onClick={toggleAnalysis}
+              className="flex flex-col items-center space-y-1"
             >
               <Brain className="w-4 h-4" />
+              <span className="text-xs">{isAnalyzing ? '일시정지' : '분석 시작'}</span>
             </ActionButton>
 
             {/* 비디오 토글 */}
@@ -466,8 +581,10 @@ export default function VideoCallEmotionAnalysis({
               variant={isVideoOn ? 'secondary' : 'danger'}
               size="sm"
               onClick={toggleVideo}
+              className="flex flex-col items-center space-y-1"
             >
               {isVideoOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+              <span className="text-xs">{isVideoOn ? '카메라 끄기' : '카메라 켜기'}</span>
             </ActionButton>
 
             {/* 오디오 토글 */}
@@ -475,8 +592,10 @@ export default function VideoCallEmotionAnalysis({
               variant={isAudioOn ? 'secondary' : 'danger'}
               size="sm"
               onClick={toggleAudio}
+              className="flex flex-col items-center space-y-1"
             >
               {isAudioOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+              <span className="text-xs">{isAudioOn ? '마이크 끄기' : '마이크 켜기'}</span>
             </ActionButton>
 
             {/* 전체화면 토글 */}
@@ -484,8 +603,10 @@ export default function VideoCallEmotionAnalysis({
               variant="secondary"
               size="sm"
               onClick={toggleFullscreen}
+              className="flex flex-col items-center space-y-1"
             >
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              <span className="text-xs">{isFullscreen ? '전체화면 해제' : '전체화면'}</span>
             </ActionButton>
 
             {/* 통화 종료 */}
@@ -493,8 +614,10 @@ export default function VideoCallEmotionAnalysis({
               variant="danger"
               size="sm"
               onClick={endCall}
+              className="flex flex-col items-center space-y-1"
             >
               <PhoneOff className="w-4 h-4" />
+              <span className="text-xs">통화 종료</span>
             </ActionButton>
           </div>
         </div>
