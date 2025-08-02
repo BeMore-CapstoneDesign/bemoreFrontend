@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation';
 import { cn } from '../../utils/cn';
 import { 
   Home, 
-  MessageCircle, 
   History, 
   Settings,
   User,
@@ -14,7 +13,6 @@ import { useAppStore } from '../../modules/store';
 
 const chatNavigationItems = [
   { name: '홈', href: '/', icon: Home },
-  { name: 'AI 채팅', href: '/chat', icon: MessageCircle },
   { name: '감정 분석', href: '/analysis', icon: Brain },
   { name: '채팅 히스토리', href: '/history', icon: History },
   { name: '설정', href: '/settings', icon: Settings },
