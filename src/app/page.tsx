@@ -17,8 +17,7 @@ import {
   Heart,
   Target,
   Clock,
-  Brain,
-  Bot
+  Brain
 } from 'lucide-react';
 import { useAppStore } from '../modules/store';
 import { emotionEmojis, getEmotionAdvice } from '../utils/emotion';
@@ -63,16 +62,6 @@ export default function HomePage() {
       gradient: 'from-indigo-50 to-indigo-100',
       border: 'border-indigo-200',
       features: ['텍스트 분석', '음성 분석', '표정 분석', 'CBT 피드백']
-    },
-    {
-      title: 'AI 상담사',
-      description: 'AI와 대화하며 감정을 탐색하고 상담을 받습니다',
-      icon: Bot,
-      href: '/chat',
-      color: 'from-violet-500 to-violet-600',
-      gradient: 'from-violet-50 to-violet-100',
-      border: 'border-violet-200',
-      features: ['대화형 상담', '감정 탐색', '상담 리포트', 'PDF 다운로드']
     },
     {
       title: '히스토리',
