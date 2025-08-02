@@ -453,7 +453,7 @@ export default function AnalysisPage() {
         {/* 워크플로우별 컨텐츠 */}
         {workflow === 'ready' && !showVideoCall && (
           <MultimodalAnalysisInterface
-            onStartAnalysis={handleStartAnalysis}
+            onStartAnalysis={(data) => handleStartAnalysis(data)}
             isAnalyzing={false}
             progress={progress}
             currentStep={currentStep}
