@@ -33,7 +33,7 @@ import { emotionEmojis } from '../../utils/emotion';
 import VideoCallEmotionAnalysis from '../../components/analysis/VideoCallEmotionAnalysis';
 
 // 단순화된 워크플로우
-type SimpleWorkflow = 'ready' | 'analyzing' | 'result' | 'video-call';
+type SimpleWorkflow = 'ready' | 'analyzing' | 'result';
 
 // 감정별 색상 시스템
 const emotionColors = {
@@ -84,12 +84,14 @@ function MultimodalAnalysisInterface({
   onStartAnalysis, 
   isAnalyzing,
   progress,
-  currentStep
+  currentStep,
+  onVideoCall
 }: { 
   onStartAnalysis: (data: { text?: string; audioFile?: File; imageFile?: File }) => void; 
   isAnalyzing: boolean;
   progress: number;
   currentStep: string;
+  onVideoCall: () => void;
 }) {
   const [textInput, setTextInput] = useState('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -346,9 +348,9 @@ function MultimodalAnalysisInterface({
         </Card>
       )}
 
-      {/* 시작 버튼 */}
+      {/* 시작 버튼들 */}
       {!isAnalyzing && (
-        <div className="flex justify-center pt-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
           <Button
             variant="gradient"
             size="xl"
@@ -358,6 +360,15 @@ function MultimodalAnalysisInterface({
             className="px-12 py-4 text-lg font-semibold"
           >
             멀티모달 감정 분석 시작
+          </Button>
+          <Button
+            variant="outline"
+            size="xl"
+            onClick={onVideoCall}
+            icon={<Video className="w-5 h-5" />}
+            className="px-12 py-4 text-lg font-semibold border-accent text-accent hover:bg-accent hover:text-white"
+          >
+            영상 통화 분석 시작
           </Button>
         </div>
       )}
@@ -546,6 +557,7 @@ export default function AnalysisPage() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('preparing');
+  const [showVideoCall, setShowVideoCall] = useState(false);
   
   // 클라이언트 사이드 마운트 확인
   useLayoutEffect(() => {
@@ -648,10 +660,10 @@ export default function AnalysisPage() {
             <Brain className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-            {workflow === 'video-call' ? '영상 통화 감정 분석' : '멀티모달 감정 분석'}
+            {showVideoCall ? '영상 통화 감정 분석' : '멀티모달 감정 분석'}
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            {workflow === 'video-call' 
+            {showVideoCall 
               ? '실시간 화상 통화를 통해 감정을 분석하고 모니터링합니다'
               : '텍스트, 음성, 이미지를 통합하여 정확한 감정 분석을 제공합니다'
             }
@@ -670,73 +682,18 @@ export default function AnalysisPage() {
         )}
 
         {/* 워크플로우별 컨텐츠 */}
-        {workflow === 'ready' && (
-          <>
-            {/* 분석 모드 선택 */}
-            <Card variant="elevated" hover>
-              <CardHeader>
-                <CardTitle>
-                  <Brain className="w-5 h-5 text-primary" />
-                  <span>분석 모드 선택</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* 멀티모달 분석 모드 */}
-                  <div 
-                    className="p-6 border-2 border-primary/20 rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 group"
-                    onClick={() => setWorkflow('analyzing')}
-                  >
-                    <div className="flex items-center space-x-4 mb-3">
-                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                        <MessageSquare className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 text-lg">멀티모달 분석</h3>
-                        <p className="text-sm text-gray-600">텍스트, 음성, 이미지 입력</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center text-primary text-sm font-medium">
-                      <Zap className="w-4 h-4 mr-1" />
-                      고정밀 분석
-                    </div>
-                  </div>
-
-                  {/* 영상 통화 분석 모드 */}
-                  <div 
-                    className="p-6 border-2 border-accent/20 rounded-xl cursor-pointer hover:border-accent/40 hover:bg-accent/5 transition-all duration-300 group"
-                    onClick={() => setWorkflow('video-call')}
-                  >
-                    <div className="flex items-center space-x-4 mb-3">
-                      <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center group-hover:bg-accent/20 transition-colors">
-                        <Video className="w-6 h-6 text-accent" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 text-lg">영상 통화 분석</h3>
-                        <p className="text-sm text-gray-600">실시간 화상 감정 분석</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center text-accent text-sm font-medium">
-                      <Activity className="w-4 h-4 mr-1" />
-                      실시간 모니터링
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 멀티모달 분석 인터페이스 */}
-            <MultimodalAnalysisInterface
-              onStartAnalysis={handleStartAnalysis}
-              isAnalyzing={false}
-              progress={progress}
-              currentStep={currentStep}
-            />
-          </>
+        {workflow === 'ready' && !showVideoCall && (
+          <MultimodalAnalysisInterface
+            onStartAnalysis={handleStartAnalysis}
+            isAnalyzing={false}
+            progress={progress}
+            currentStep={currentStep}
+            onVideoCall={() => setShowVideoCall(true)}
+          />
         )}
 
-        {/* 영상 통화 분석 모드 */}
-        {workflow === 'video-call' && (
+        {/* 영상 통화 분석 */}
+        {showVideoCall && (
           <div className="h-[600px]">
             <VideoCallEmotionAnalysis
               isActive={true}
@@ -745,12 +702,14 @@ export default function AnalysisPage() {
                 addEmotionAnalysis(emotion);
               }}
               onCallEnd={() => {
-                setWorkflow('ready');
+                setShowVideoCall(false);
                 setAnalysisResult(null);
               }}
             />
           </div>
         )}
+
+
 
         {/* 결과 모달 */}
         {showResult && analysisResult && (
