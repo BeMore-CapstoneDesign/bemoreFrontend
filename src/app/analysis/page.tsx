@@ -93,44 +93,14 @@ function MultimodalAnalysisInterface({
   currentStep: string;
   onVideoCall: () => void;
 }) {
-  const [textInput, setTextInput] = useState('');
-
   const steps = [
     { key: 'preparing', label: '준비 중' },
     { key: 'analyzing', label: '분석 중' },
     { key: 'completed', label: '완료' }
   ];
 
-  const handleStartAnalysis = async () => {
-    onStartAnalysis({
-      text: textInput.trim() || undefined
-    });
-  };
-
   return (
     <div className="space-y-8">
-      {/* 간단한 텍스트 입력 */}
-      <Card variant="elevated" hover>
-        <CardHeader>
-          <CardTitle>
-            <MessageSquare className="w-5 h-5 text-primary" />
-            <span>감정 분석할 내용</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <textarea
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            placeholder="분석하고 싶은 텍스트를 입력하거나, 빈 상태로 두면 영상 통화 분석을 시작합니다..."
-            className="w-full h-32 p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
-            disabled={isAnalyzing}
-          />
-          <p className="mt-2 text-sm text-gray-500">
-            텍스트를 입력하면 멀티모달 분석, 빈 상태로 두면 영상 통화 분석이 시작됩니다.
-          </p>
-        </CardContent>
-      </Card>
-
       {/* 분석 진행률 */}
       {isAnalyzing && (
         <Card variant="gradient">
@@ -163,18 +133,11 @@ function MultimodalAnalysisInterface({
           <Button
             variant="gradient"
             size="xl"
-            onClick={() => {
-              // 입력된 내용이 있으면 멀티모달 분석, 없으면 영상 통화 분석
-              if (textInput.trim()) {
-                handleStartAnalysis();
-              } else {
-                onVideoCall();
-              }
-            }}
-            icon={textInput.trim() ? <Brain className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+            onClick={onVideoCall}
+            icon={<Video className="w-5 h-5" />}
             className="px-12 py-4 text-lg font-semibold"
           >
-            {textInput.trim() ? '멀티모달 분석 시작' : '영상 통화 분석 시작'}
+            감정 분석 시작
           </Button>
         </div>
       )}
