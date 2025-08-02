@@ -241,7 +241,7 @@ export default function HomePage() {
                 <p className="text-lg mb-6 opacity-90">
                   AI와 함께 감정을 탐색하고 더 나은 마음 건강을 경험하세요
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex justify-center">
                   <Button
                     variant="secondary"
                     size="lg"
@@ -250,15 +250,6 @@ export default function HomePage() {
                   >
                     <Brain className="w-5 h-5 mr-2" />
                     감정 분석 시작
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    onClick={() => window.location.href = '/chat'}
-                    className="bg-white text-indigo-600 hover:bg-gray-100"
-                  >
-                    <Bot className="w-5 h-5 mr-2" />
-                    AI 상담 시작
                   </Button>
                 </div>
               </div>
@@ -291,9 +282,9 @@ export default function HomePage() {
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center">
                 <Clock className="w-6 h-6 text-purple-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">24/7 상담</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">실시간 분석</h3>
               <p className="text-sm text-gray-600">
-                언제든지 AI 상담사와 대화하며 감정을 탐색할 수 있습니다
+                언제든지 실시간으로 감정을 분석하고 피드백을 받을 수 있습니다
               </p>
             </Card>
           </div>
