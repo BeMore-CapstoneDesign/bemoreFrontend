@@ -1,0 +1,199 @@
+# BeMore Project Overview & Core Rules
+
+## 프로젝트 개요
+
+BeMore는 **AI 기반 감정 분석 & CBT 피드백 서비스**로, Next.js 15 + TypeScript + Tailwind CSS 기반의 현대적 웹 애플리케이션입니다.
+
+### 핵심 기능
+- 🎥 **영상 상담 감정 분석**: 실시간 화상 상담 기반 감정 분석
+- 🤖 **AI 채팅**: Gemini API 기반 AI 상담사
+- 📊 **멀티모달 분석**: 텍스트, 음성, 이미지 통합 분석
+- 📄 **PDF 리포트**: 한글 폰트 지원 리포트 생성
+
+### 기술 스택
+- **Frontend**: Next.js 15 (App Router), TypeScript 5, Tailwind CSS 4
+- **State Management**: Zustand 5
+- **UI Components**: Custom components + Lucide React icons
+- **API**: Axios + Repository pattern
+- **Development**: Turbopack, ESLint, PostCSS
+
+## 핵심 개발 원칙
+
+### 1. 안전성 우선 (Safety First)
+- **절대 금지사항**: 프로덕션 환경에 직접 배포하는 코드 생성 금지
+- **Guardrails**: 테스트 외에는 개발/프로덕션 환경에서 모의 데이터를 사용 금지
+- **데이터 보호**: 실제 사용자 데이터나 민감한 정보를 코드에 포함시키지 말 것
+- **보안 검증**: 사용자 입력 검증, SQL 인젝션 방지, XSS 방지 코드 필수 포함
+
+### 2. 점진적 접근 (Incremental Approach)
+- **작은 단위로 작업**: 한 번에 100줄 이상의 코드 변경 지양
+- **단계별 구현**: 복잡한 기능은 3-5단계로 나누어 구현 계획 제시
+- **확인 후 진행**: 각 단계마다 구현 내용 설명 후 승인받고 진행
+
+### 3. 코드 품질 우선
+- **우선순위**: 가독성 > 유지보수성 > 성능 > 간결성
+- **DRY 원칙**: 코드 중복을 피하고 가능한 기존 기능을 재사용
+- **단순성 우선**: 언제나 가장 간단한 솔루션 선택
+
+## 프로젝트 구조
+
+```
+📁 bemore-frontend/
+├── 📁 src/
+│   ├── 📁 app/                    # Next.js App Router
+│   │   ├── 📁 analysis/           # 감정 분석 페이지
+│   │   ├── 📁 history/            # 히스토리 페이지
+│   │   ├── 📁 profile/            # 마이페이지
+│   │   └── 📁 settings/           # 설정 페이지
+│   ├── 📁 components/             # React 컴포넌트
+│   │   ├── 📁 analysis/           # 감정 분석 컴포넌트
+│   │   ├── 📁 layout/             # 레이아웃 컴포넌트
+│   │   └── 📁 ui/                 # 공통 UI 컴포넌트
+│   ├── 📁 hooks/                  # Custom Hooks
+│   ├── 📁 modules/                # 상태 관리 (Zustand)
+│   ├── 📁 services/               # API 서비스
+│   ├── 📁 types/                  # TypeScript 타입 정의
+│   └── 📁 utils/                  # 유틸리티 함수
+├── 📁 .cursor/rules/              # 개발 규칙 (Cursor IDE)
+├── 📁 public/                     # 정적 파일
+└── 📄 설정 파일들
+```
+
+## 개발 환경 설정
+
+### 필수 환경 변수
+```env
+# .env.local
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_APP_NAME=BeMore
+NEXT_PUBLIC_ENV=development
+```
+
+### 개발 서버 실행
+```bash
+npm install
+npm run dev  # http://localhost:3005
+```
+
+### 빌드 및 배포
+```bash
+npm run build
+npm run start
+```
+
+## 오류 예방 핵심 규칙
+
+### 1. 캐시 관리
+```bash
+# 캐시 문제 해결 (즉시 실행)
+pkill -f "next dev"
+rm -rf .next node_modules/.cache
+lsof -ti:3005 | xargs kill -9
+npm run dev
+```
+
+### 2. useEffect 사용 규칙
+```typescript
+// ❌ 잘못된 사용 (무한 루프)
+}, [isAnalyzing, isAudioOn, isVideoOn, onEmotionChange]);
+
+// ✅ 올바른 사용
+}, [isAnalyzing, isAudioOn, isVideoOn]);
+```
+
+### 3. 리소스 정리
+```typescript
+// ❌ 잘못된 정리
+if (audioContextRef.current) {
+  audioContextRef.current.close();
+}
+
+// ✅ 안전한 정리
+if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+  try {
+    audioContextRef.current.close();
+  } catch (error) {
+    console.warn('AudioContext already closed:', error);
+  }
+}
+```
+
+## 코드 컨벤션
+
+### TypeScript
+- **엄격한 타입 체크**: `strict: true` 설정
+- **타입 우선 개발**: 새로운 타입 값 사용 전 정의 업데이트
+- **인터페이스 분리**: 작고 명확한 인터페이스 설계
+
+### React
+- **함수형 컴포넌트**: Hooks 기반 개발
+- **Props 인터페이스**: 명시적 타입 정의
+- **컴포넌트 분리**: 단일 책임 원칙 적용
+
+### 스타일링
+- **Tailwind CSS**: CSS 변수 활용한 일관된 색상 팔레트
+- **반응형 디자인**: 모바일 퍼스트 접근
+- **컴포넌트 기반**: 재사용 가능한 클래스 조합
+
+## Git 워크플로우
+
+### 커밋 규칙
+```bash
+# Conventional Commits 형식
+<type>(<scope>): <subject>
+
+# 타입 종류
+feat: 새로운 기능
+fix: 버그 수정
+docs: 문서 수정
+style: 코드 포맷팅
+refactor: 리팩토링
+test: 테스트 추가/수정
+chore: 빌드/설정 변경
+```
+
+### 브랜치 전략
+- `main`: 프로덕션 준비 코드
+- `develop`: 개발 중인 기능
+- `feature/*`: 개별 기능 개발
+- `hotfix/*`: 긴급 수정
+
+## 성능 최적화
+
+### 번들 크기 관리
+- **정기 분석**: `npm run build` 후 Route Size 확인
+- **코드 분할**: 동적 import 활용
+- **이미지 최적화**: Next.js Image 컴포넌트 사용
+
+### 메모리 관리
+- **메모리 누수 방지**: useEffect cleanup 함수 활용
+- **불필요한 리렌더링 방지**: React.memo, useMemo, useCallback 활용
+- **상태 최적화**: Zustand 선택적 구독 활용
+
+## 테스트 전략
+
+### 단위 테스트
+- **컴포넌트 테스트**: React Testing Library
+- **유틸리티 테스트**: Jest
+- **타입 테스트**: TypeScript 컴파일러
+
+### 통합 테스트
+- **API 테스트**: 실제 API 엔드포인트 테스트
+- **E2E 테스트**: Playwright 또는 Cypress
+- **성능 테스트**: Lighthouse CI
+
+## 배포 전 체크리스트
+
+- [ ] 빌드 성공 (`npm run build`)
+- [ ] 타입 체크 통과 (`npx tsc --noEmit`)
+- [ ] 린트 오류 없음 (`npm run lint`)
+- [ ] 기능 테스트 완료
+- [ ] 성능 최적화 확인
+- [ ] 환경 변수 설정 완료
+- [ ] 보안 검증 완료
+
+이 규칙들을 준수하면 안정적이고 효율적인 개발이 가능합니다.
+description:
+globs:
+alwaysApply: false
+---

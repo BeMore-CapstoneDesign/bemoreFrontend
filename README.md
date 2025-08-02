@@ -2,12 +2,26 @@
 
 BeMore는 **NestJS 백엔드 + Next.js 프론트엔드** 기반으로 멀티모달 감정 분석, 인지행동치료(CBT) 피드백, 대화 리포트 PDF 생성까지 제공하는 현대적 심리 케어 서비스입니다.
 
-> 🎉 **최근 업데이트**: Gemini API 모델 업데이트 및 데이터베이스 세션 관리 개선 완료!
+> 🎉 **최근 업데이트**: 영상 상담 감정 분석 UX 대폭 개선 및 오류 예방 규칙 체계화 완료!
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-10-red?style=for-the-badge&logo=nestjs)](https://nestjs.com/)
 [![Prisma](https://img.shields.io/badge/Prisma-ORM-green?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
+
+---
+
+## 📋 **목차**
+
+- [🏗️ 아키텍처 개요](#️-아키텍처-개요)
+- [✨ 주요 기능](#-주요-기능)
+- [🚀 빠른 시작](#-빠른-시작)
+- [📁 프로젝트 구조](#-프로젝트-구조)
+- [🎯 개발 규칙](#-개발-규칙)
+- [🛠️ 개발 환경](#️-개발-환경)
+- [🚨 오류 예방](#-오류-예방)
+- [📚 API 문서](#-api-문서)
+- [🔧 트러블슈팅](#-트러블슈팅)
 
 ---
 
@@ -25,7 +39,7 @@ BeMore는 **NestJS 백엔드 + Next.js 프론트엔드** 기반으로 멀티모�
 📁 Next.js Frontend (TypeScript)
 ├── 🎨 UI/UX 컴포넌트
 ├── 📱 반응형 디자인
-├── 🗃️ 상태 관리
+├── 🗃️ Zustand 상태 관리
 └── 📡 NestJS API 통신
 ```
 
@@ -38,7 +52,14 @@ BeMore는 **NestJS 백엔드 + Next.js 프론트엔드** 기반으로 멀티모�
 
 ---
 
-## ✨ 주요 기능
+## ✨ **주요 기능**
+
+### 🎥 **영상 상담 감정 분석**
+- **실시간 화상 상담** 기반 감정 분석
+- **명확한 상태 표시**: 연결 중/연결됨/분석 중/일시정지/종료됨
+- **녹화 시간 카운터**: 실시간 상담 시간 표시
+- **직관적 컨트롤**: 분석 시작/일시정지, 카메라/마이크 토글
+- **상담 종료 후 자동 결과**: 분석 결과 모달 자동 표시
 
 ### 🤖 **AI 채팅 & 감정 분석**
 - **Gemini API 기반 AI 상담사**
@@ -98,255 +119,252 @@ NEXT_PUBLIC_APP_VERSION=1.0.0
 ```env
 # Database (개발용 SQLite)
 DATABASE_URL="file:./dev.db"
-
-# Gemini API
-GEMINI_API_KEY="your-gemini-api-key"
-
-# JWT
-JWT_SECRET="bemore-jwt-secret-key-2024"
-
-# Server
-PORT=3000
-
-# File Upload
-MAX_FILE_SIZE=10485760  # 10MB
-UPLOAD_DEST="./uploads"
 ```
 
 ### 3. **의존성 설치 및 실행**
-
-#### **백엔드 실행**
 ```bash
-cd bemoreBackend
-
-# 의존성 설치
+# 프론트엔드
 npm install
+npm run dev
 
-# 데이터베이스 초기화
-npx prisma db push
-
-# 개발 서버 실행
+# 백엔드
+npm install
 npm run start:dev
 ```
 
-#### **프론트엔드 실행**
-```bash
-cd bemoreFrontend
+### 4. **접속**
+- **프론트엔드**: http://localhost:3005
+- **백엔드**: http://localhost:3000
 
-# 의존성 설치
+---
+
+## 📁 **프로젝트 구조**
+
+```
+📁 bemore-frontend/
+├── 📁 src/
+│   ├── 📁 app/                    # Next.js App Router
+│   │   ├── 📁 analysis/           # 감정 분석 페이지
+│   │   ├── 📁 chat/              # AI 채팅 페이지
+│   │   ├── 📁 history/           # 히스토리 페이지
+│   │   ├── 📁 profile/           # 마이페이지
+│   │   └── 📁 settings/          # 설정 페이지
+│   ├── 📁 components/            # React 컴포넌트
+│   │   ├── 📁 analysis/          # 감정 분석 컴포넌트
+│   │   ├── 📁 chat/             # 채팅 컴포넌트
+│   │   ├── 📁 layout/           # 레이아웃 컴포넌트
+│   │   └── 📁 ui/               # 공통 UI 컴포넌트
+│   ├── 📁 hooks/                # Custom Hooks
+│   ├── 📁 modules/              # 상태 관리 (Zustand)
+│   ├── 📁 services/             # API 서비스
+│   ├── 📁 types/                # TypeScript 타입 정의
+│   └── 📁 utils/                # 유틸리티 함수
+├── 📁 .cursor/rules/            # 개발 규칙 (Cursor IDE)
+├── 📁 public/                   # 정적 파일
+└── 📄 설정 파일들
+```
+
+---
+
+## 🎯 **개발 규칙**
+
+### **코드 품질 규칙**
+
+#### **TypeScript 패턴**
+- **엄격한 타입 체크**: `strict: true` 설정
+- **타입 우선 개발**: 새로운 타입 값 사용 전 정의 업데이트
+- **인터페이스 분리**: 작고 명확한 인터페이스 설계
+
+#### **React 컴포넌트 패턴**
+- **함수형 컴포넌트**: Hooks 기반 개발
+- **Props 인터페이스**: 명시적 타입 정의
+- **컴포넌트 분리**: 단일 책임 원칙 적용
+
+#### **상태 관리 패턴**
+- **Zustand 스토어**: 도메인별 스토어 분리
+- **불변성 유지**: immer 또는 스프레드 연산자 사용
+- **선택적 구독**: 필요한 상태만 구독
+
+### **스타일링 규칙**
+
+#### **Tailwind CSS 패턴**
+- **CSS 변수 활용**: 일관된 색상 팔레트
+- **반응형 디자인**: 모바일 퍼스트 접근
+- **컴포넌트 기반**: 재사용 가능한 클래스 조합
+
+#### **디자인 시스템**
+- **색상 팔레트**: primary, secondary, accent, neutral
+- **타이포그래피**: NotoSansKR 폰트 사용
+- **간격 시스템**: 4px 단위 기반
+
+---
+
+## 🛠️ **개발 환경**
+
+### **Next.js 개발 서버 설정**
+```bash
+# package.json scripts
+"dev": "next dev --turbopack -p 3005",
+"build": "next build",
+"start": "next start -p 3005"
+```
+
+### **캐시 관리 전략**
+```bash
+# 정기 클리닝 (주 1회)
+rm -rf .next node_modules/.cache
 npm install
 
-# MediaPipe 라이브러리 설치 (자동 설치됨)
-npm install @mediapipe/face_mesh @mediapipe/camera_utils @mediapipe/drawing_utils
-
-# 개발 서버 실행
+# 개발 중 캐시 문제 해결
+pkill -f "next dev"
+rm -rf .next node_modules/.cache
+lsof -ti:3005 | xargs kill -9
 npm run dev
 ```
 
-### 4. **접속 확인**
-- **프론트엔드**: http://localhost:3005
-- **백엔드 API**: http://localhost:3000/api
-- **API 문서**: http://localhost:3000/api/docs
+### **브라우저 개발 설정**
+- **Network 탭**: "Disable cache" 체크
+- **Console 탭**: "Preserve log" 체크
+- **Sources 탭**: "Pause on uncaught exceptions" 체크
 
-### 5. **기능 테스트**
-
-#### **기본 API 테스트**
+### **Git 워크플로우**
 ```bash
-# 백엔드 API 테스트
-curl -X POST http://localhost:3000/api/chat/gemini \
-  -H "Content-Type: application/json" \
-  -d '{"message": "안녕하세요, 오늘 기분이 좋지 않아요"}'
+# 커밋 전 체크리스트
+npm run build          # 빌드 테스트
+npx tsc --noEmit       # 타입 체크
+npm run lint           # 린트 체크
+git add .              # 변경사항 스테이징
+git commit -m "feat: description"  # 커밋
+git push               # 푸시
+```
 
-# 예상 응답
-{
-  "success": true,
-  "data": {
-    "content": "안녕하세요. 오늘 기분이 좋지 않다고 하셨네요...",
-    "emotionAnalysis": {
-      "primaryEmotion": "슬픔",
-      "confidence": 0.95,
-      "suggestions": ["현재 상황에 대한 구체적인 내용 파악..."]
-    }
+---
+
+## 🚨 **오류 예방**
+
+### **주요 오류 유형 및 해결책**
+
+#### **1. 정적 파일 로딩 오류 (400 Bad Request)**
+```bash
+# 증상: GET http://localhost:3005/_next/static/chunks/xxx.js net::ERR_ABORTED 400
+# 해결책:
+pkill -f "next dev"
+rm -rf .next node_modules/.cache
+lsof -ti:3005 | xargs kill -9
+npm run dev
+```
+
+#### **2. 무한 루프 오류**
+```typescript
+// 증상: Maximum update depth exceeded
+// 원인: useEffect 의존성 배열에 함수 참조 포함
+// 해결책: 함수 참조 제거
+}, [isAnalyzing, isAudioOn, isVideoOn]); // onEmotionChange 제거
+```
+
+#### **3. AudioContext 오류**
+```typescript
+// 증상: Cannot close a closed AudioContext
+// 해결책: 상태 확인 후 안전한 정리
+if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+  try {
+    audioContextRef.current.close();
+  } catch (error) {
+    console.warn('AudioContext already closed:', error);
   }
 }
 ```
 
-#### **멀티모달 분석 테스트**
-1. **프론트엔드 접속**: http://localhost:3005
-2. **분석 페이지 이동**: `/analysis`
-3. **멀티모달 분석 선택**: "멀티모달 분석" 카드 클릭
-4. **권한 허용**: 웹캠 및 마이크 접근 권한 허용
-5. **실시간 분석 확인**: 표정 및 음성 분석 결과 확인
+### **응급 상황 대응 체크리스트**
+1. **브라우저 하드 리프레시** (Cmd+Shift+R)
+2. **개발자 도구 콘솔 확인**
+3. **서버 로그 확인**
+4. **캐시 클리닝 실행**
+5. **빌드 재실행**
+6. **기능 테스트**
 
 ---
 
-## 🛠️ **개발 가이드**
+## 📚 **API 문서**
 
-### **프로젝트 구조**
-```
-bemore-frontend/
-├── src/
-│   ├── app/                 # Next.js App Router
-│   ├── components/          # React 컴포넌트
-│   ├── services/           # API 서비스
-│   ├── types/              # TypeScript 타입 정의
-│   └── utils/              # 유틸리티 함수
-├── public/                 # 정적 파일
-├── .env.local             # 환경 변수
-└── package.json
-
-bemore-backend/
-├── src/
-│   ├── modules/            # NestJS 모듈
-│   ├── controllers/        # API 컨트롤러
-│   ├── services/          # 비즈니스 로직
-│   └── prisma/            # 데이터베이스 스키마
-├── .env                   # 환경 변수
-└── package.json
-```
-
-### **주요 API 엔드포인트**
+### **감정 분석 API**
 ```typescript
-// AI 채팅
-POST /api/chat/gemini
+// 멀티모달 감정 분석
+POST /api/emotion/analyze
 {
-  "message": "사용자 메시지",
-  "sessionId": "세션 ID",
-  "emotionContext": { ... }
+  text?: string;
+  audioFile?: File;
+  imageFile?: File;
+  sessionId?: string;
 }
 
-// 감정 분석
-POST /api/emotion/analyze
-// multipart/form-data: text, audio, image
-
-// 세션 히스토리
-GET /api/history/{userId}
-
-// PDF 리포트
-POST /api/history/session/{sessionId}/pdf
+// 응답
+{
+  id: string;
+  emotion: string;
+  confidence: number;
+  vadScore: { valence: number; arousal: number; dominance: number };
+  cbtFeedback: CBTFeedback;
+}
 ```
 
-### **환경별 설정**
+### **채팅 API**
+```typescript
+// AI 채팅
+POST /api/chat/send
+{
+  message: string;
+  sessionId?: string;
+}
 
-#### **개발 환경**
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
-DATABASE_URL="file:./dev.db"
-```
-
-#### **프로덕션 환경**
-```env
-NEXT_PUBLIC_API_URL=https://api.bemore.com
-DATABASE_URL="postgresql://user:pass@host:5432/bemore"
+// 응답
+{
+  id: string;
+  message: string;
+  timestamp: string;
+  emotion?: string;
+}
 ```
 
 ---
 
-## 📚 **기술 스택**
+## 🔧 **트러블슈팅**
 
-### **프론트엔드**
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript 5
-- **Styling**: TailwindCSS
-- **State Management**: React Hooks + Context
-- **PDF Generation**: jsPDF + html2canvas
-- **Icons**: Lucide React
-- **HTTP Client**: Axios
+### **자주 발생하는 문제**
 
-### **백엔드**
-- **Framework**: NestJS 10
-- **Language**: TypeScript 5
-- **Database**: PostgreSQL / SQLite (Prisma ORM)
-- **AI Integration**: Google Gemini API
-- **Authentication**: JWT
-- **File Upload**: Multer
-- **Documentation**: Swagger/OpenAPI
-
-### **개발 도구**
-- **Package Manager**: npm
-- **Linting**: ESLint
-- **Formatting**: Prettier
-- **Version Control**: Git
-- **Deployment**: Vercel (Frontend) / Railway (Backend)
-
----
-
-## 🧪 **테스트**
-
-### **API 테스트**
+#### **포트 충돌**
 ```bash
-# VSCode REST Client 사용
-# test-api.http 파일에서 "Send Request" 클릭
-
-# 또는 curl 사용
-curl -X POST http://localhost:3000/api/chat/gemini \
-  -H "Content-Type: application/json" \
-  -d '{"message": "테스트 메시지"}'
+# 포트 3005가 이미 사용 중인 경우
+lsof -ti:3005 | xargs kill -9
 ```
 
-### **프론트엔드 테스트**
+#### **빌드 실패**
 ```bash
-npm run test
-npm run test:e2e
+# 캐시 클리닝 후 재빌드
+rm -rf .next
+npm run build
 ```
 
-## 🔧 **최근 해결된 문제들**
+#### **타입 오류**
+```bash
+# 타입 체크 실행
+npx tsc --noEmit
+```
 
-### ✅ **Gemini API 모델 업데이트**
-- **문제**: `gemini-pro` 모델이 더 이상 지원되지 않음
-- **해결**: `gemini-1.5-flash` 모델로 업데이트
-- **결과**: AI 채팅 기능 정상 작동
-
-### ✅ **데이터베이스 세션 관리 개선**
-- **문제**: 외래키 제약 조건 위반으로 메시지 저장 실패
-- **해결**: 세션 생성 로직 단순화 및 사용자 생성 순서 최적화
-- **결과**: 안정적인 세션 및 메시지 저장
-
-### ✅ **백엔드-프론트엔드 통합 완료**
-- **상태**: 모든 API 엔드포인트 정상 작동
-- **테스트**: 실제 채팅 및 감정 분석 기능 검증 완료
-- **성능**: 빠른 응답 시간 및 안정적인 데이터 처리
-
----
-
-## 📄 **문서**
-
-- [📋 API 통합 상태](API_INTEGRATION_STATUS.md)
-- [🔧 환경 변수 가이드](ENV_USAGE_GUIDE.md)
-- [🏗️ 아키텍처 문서](ARCHITECTURE.md)
-- [📈 마이그레이션 계획](MIGRATION_PLAN.md)
-- [⚙️ 백엔드 환경 설정](BACKEND_ENV_STATUS.md)
-- [🔍 문제 해결 가이드](TROUBLESHOOTING.md)
-
-## 🚀 **다음 개발 계획**
-
-### **단기 목표 (1-2주)**
-- [ ] 사용자 인증 시스템 구현
-- [ ] 음성 입력 기능 추가
-- [ ] 실시간 감정 분석 대시보드
-- [ ] 모바일 앱 최적화
-
-### **중기 목표 (1-2개월)**
-- [ ] 멀티모달 감정 분석 (음성 + 표정)
-- [ ] 개인화된 CBT 프로그램
-- [ ] 그룹 세션 기능
-- [ ] AI 기반 진단 시스템
-
-### **장기 목표 (3-6개월)**
-- [ ] 전문가 상담사 연동
-- [ ] 임상 데이터 분석
-- [ ] 연구 기관 협력
-- [ ] 글로벌 서비스 확장
+### **성능 최적화**
+- **번들 크기 분석**: `npm run build` 후 Route Size 확인
+- **메모리 누수 확인**: React DevTools Profiler 사용
+- **리렌더링 최적화**: React DevTools Components 탭 활용
 
 ---
 
 ## 🤝 **기여하기**
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. **Fork** the Project
+2. **Create** your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. **Commit** your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. **Push** to the Branch (`git push origin feature/AmazingFeature`)
+5. **Open** a Pull Request
 
 ---
 
@@ -356,18 +374,11 @@ npm run test:e2e
 
 ---
 
-## 🙌 **팀원**
+## 📞 **연락처**
 
-- **Frontend Developer**: [@your-username](https://github.com/your-username)
-- **Backend Developer**: [@your-username](https://github.com/your-username)
-- **UI/UX Designer**: [@your-username](https://github.com/your-username)
-
----
-
-## 💜 **BeMore는 여러분의 마음을 항상 응원합니다!**
-
-> "마음의 변화는 작은 대화에서 시작됩니다. BeMore와 함께 더 나은 내일을 만들어가세요."
+- **프로젝트 링크**: [https://github.com/BeMore-CapstoneDesign/bemoreFrontend](https://github.com/BeMore-CapstoneDesign/bemoreFrontend)
+- **이슈 리포트**: [https://github.com/BeMore-CapstoneDesign/bemoreFrontend/issues](https://github.com/BeMore-CapstoneDesign/bemoreFrontend/issues)
 
 ---
 
-**Made with ❤️ by BeMore Team**
+**BeMore** - 더 나은 마음 건강을 위한 AI 기반 심리 케어 서비스 🧠💙
