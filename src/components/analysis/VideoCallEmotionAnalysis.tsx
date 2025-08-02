@@ -100,8 +100,8 @@ export default function VideoCallEmotionAnalysis({
   const analyzeEmotion = useCallback(() => {
     if (!isAnalyzing) return;
 
-    let currentVoiceVAD = voiceVAD;
-    let currentFacialVAD = facialVAD;
+    let currentVoiceVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
+    let currentFacialVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
 
     // 음성 분석
     if (analyserRef.current && isAudioOn) {
@@ -306,6 +306,9 @@ export default function VideoCallEmotionAnalysis({
       const runAnalysis = () => {
         if (!isActive) return;
         
+        let currentVoiceVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
+        let currentFacialVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
+
         // 음성 분석
         if (analyserRef.current && isAudioOn) {
           const bufferLength = analyserRef.current.frequencyBinCount;
@@ -319,20 +322,18 @@ export default function VideoCallEmotionAnalysis({
           const pitchValue = calculatePitch(timeDataArray);
           const rateValue = calculateSpeechRate(timeDataArray);
 
-          const currentVoiceVAD = calculateVoiceVAD(volumeLevel, pitchValue, rateValue);
-          setVoiceVAD(currentVoiceVAD);
+          currentVoiceVAD = calculateVoiceVAD(volumeLevel, pitchValue, rateValue);
         }
 
         // 표정 분석 (간단한 시뮬레이션)
         if (isVideoOn) {
-          const currentFacialVAD = calculateFacialVAD();
-          setFacialVAD(currentFacialVAD);
+          currentFacialVAD = calculateFacialVAD();
         }
 
         // 통합 VAD 점수 계산
-        const integratedVAD = calculateIntegratedVAD(facialVAD, voiceVAD);
+        const integratedVAD = calculateIntegratedVAD(currentFacialVAD, currentVoiceVAD);
         const emotion = vadToEmotion(integratedVAD);
-        const confidenceScore = calculateConfidence(facialVAD, voiceVAD);
+        const confidenceScore = calculateConfidence(currentFacialVAD, currentVoiceVAD);
 
         const emotionAnalysis: EmotionAnalysis = {
           id: `realtime_${Date.now()}`,
@@ -381,8 +382,12 @@ export default function VideoCallEmotionAnalysis({
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        try {
+          audioContextRef.current.close();
+        } catch (error) {
+          console.warn('AudioContext already closed:', error);
+        }
       }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
