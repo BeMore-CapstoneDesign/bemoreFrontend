@@ -137,7 +137,7 @@ function MultimodalAnalysisInterface({
             icon={<Video className="w-5 h-5" />}
             className="px-12 py-4 text-lg font-semibold"
           >
-            감정 분석 시작
+            영상 상담 시작
           </Button>
         </div>
       )}
@@ -203,15 +203,15 @@ function ResultModal({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <span className={`text-2xl ${emotionEmojis[result.emotion as keyof typeof emotionEmojis] || '😐'}`}></span>
+                  <span className={`text-2xl ${emotionEmojis[result.emotion as keyof typeof emotionEmojis] || emotionEmojis.neutral}`}></span>
                   <span>주요 감정</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <div className={`text-4xl mb-2 ${emotionEmojis[result.emotion as keyof typeof emotionEmojis] || '😐'}`}></div>
+                  <div className={`text-4xl mb-2 ${emotionEmojis[result.emotion as keyof typeof emotionEmojis] || emotionEmojis.neutral}`}></div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {getEmotionText(result.emotion)}
+                    {getEmotionText(result.emotion || 'neutral')}
                   </h3>
                   <p className="text-gray-600">
                     신뢰도: {Math.round(result.confidence * 100)}%
@@ -273,19 +273,19 @@ function ResultModal({
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">인지 왜곡</h4>
-                    <p className="text-gray-700">{result.cbtFeedback.cognitiveDistortion}</p>
+                    <p className="text-gray-700">{result.cbtFeedback?.cognitiveDistortion}</p>
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">도전적 질문</h4>
-                    <p className="text-gray-700">{result.cbtFeedback.challenge}</p>
+                    <p className="text-gray-700">{result.cbtFeedback?.challenge}</p>
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">대안적 사고</h4>
-                    <p className="text-gray-700">{result.cbtFeedback.alternative}</p>
+                    <p className="text-gray-700">{result.cbtFeedback?.alternative}</p>
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">행동 계획</h4>
-                    <p className="text-gray-700">{result.cbtFeedback.actionPlan}</p>
+                    <p className="text-gray-700">{result.cbtFeedback?.actionPlan}</p>
                   </div>
                 </div>
               </CardContent>
