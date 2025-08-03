@@ -236,6 +236,7 @@ export default function RealTimeFacialAnalysis({
             <video
               ref={videoRef}
               className="w-full h-64 bg-gray-100 rounded-lg object-cover transform scale-x-[-1]"
+              style={{ transform: 'scaleX(-1) !important' }}
               autoPlay
               muted
               playsInline

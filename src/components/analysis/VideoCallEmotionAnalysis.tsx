@@ -520,6 +520,7 @@ export default function VideoCallEmotionAnalysis({
         <video
           ref={videoRef}
           className="w-full h-full object-cover transform scale-x-[-1]"
+          style={{ transform: 'scaleX(-1) !important' }}
           autoPlay
           muted
           playsInline
