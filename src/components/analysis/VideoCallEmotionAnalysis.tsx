@@ -579,14 +579,7 @@ export default function VideoCallEmotionAnalysis({
           </div>
         )}
 
-        {/* 녹화 상태 표시 */}
-        {isAnalyzing && (
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium animate-pulse">
-              🔴 녹화 중
-            </div>
-          </div>
-        )}
+
 
         {/* 컨트롤 바 */}
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 rounded-full px-8 py-4 backdrop-blur-sm">
