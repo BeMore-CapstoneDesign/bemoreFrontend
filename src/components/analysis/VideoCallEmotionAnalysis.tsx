@@ -481,7 +481,7 @@ export default function VideoCallEmotionAnalysis({
       <div className="relative w-full h-full">
         <video
           ref={videoRef}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transform scale-x-[-1]"
           autoPlay
           muted
           playsInline

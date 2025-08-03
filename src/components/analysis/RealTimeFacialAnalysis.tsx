@@ -235,7 +235,7 @@ export default function RealTimeFacialAnalysis({
           <div className="relative">
             <video
               ref={videoRef}
-              className="w-full h-64 bg-gray-100 rounded-lg object-cover"
+              className="w-full h-64 bg-gray-100 rounded-lg object-cover transform scale-x-[-1]"
               autoPlay
               muted
               playsInline
