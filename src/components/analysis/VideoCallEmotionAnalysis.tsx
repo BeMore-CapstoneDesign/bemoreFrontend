@@ -59,6 +59,11 @@ export default function VideoCallEmotionAnalysis({
   const [emotionHistory, setEmotionHistory] = useState<Array<{timestamp: number; emotion: string; valence: number}>>([]);
   const [showEmotionChart, setShowEmotionChart] = useState(false);
 
+  // 부드러운 전환을 위한 상태 추가
+  const [displayedVAD, setDisplayedVAD] = useState<VADScore>({ valence: 0.5, arousal: 0.5, dominance: 0.5 });
+  const [displayedConfidence, setDisplayedConfidence] = useState(0);
+  const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // 감정 통계 계산 함수
   const getEmotionStats = () => {
     if (emotionHistory.length === 0) return null;
@@ -311,12 +316,8 @@ export default function VideoCallEmotionAnalysis({
 
   // 분석 루프 시작/중지
   useEffect(() => {
-    let isActive = isAnalyzing;
-    
-    if (isActive) {
+    if (isAnalyzing) {
       const runAnalysis = () => {
-        if (!isActive) return;
-        
         let currentVoiceVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
         let currentFacialVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
 
@@ -345,6 +346,15 @@ export default function VideoCallEmotionAnalysis({
         const integratedVAD = calculateIntegratedVAD(currentFacialVAD, currentVoiceVAD);
         const emotion = vadToEmotion(integratedVAD);
         const confidenceScore = calculateConfidence(currentFacialVAD, currentVoiceVAD);
+
+        // 부드러운 전환을 위한 보간
+        setDisplayedVAD(prev => ({
+          valence: prev.valence * 0.7 + integratedVAD.valence * 0.3,
+          arousal: prev.arousal * 0.7 + integratedVAD.arousal * 0.3,
+          dominance: prev.dominance * 0.7 + integratedVAD.dominance * 0.3
+        }));
+
+        setDisplayedConfidence(prev => prev * 0.7 + confidenceScore * 0.3);
 
         const emotionAnalysis: EmotionAnalysis = {
           id: `realtime_${Date.now()}`,
@@ -378,21 +388,24 @@ export default function VideoCallEmotionAnalysis({
         if (onEmotionChange) {
           onEmotionChange(emotionAnalysis);
         }
-
-        if (isActive) {
-          animationFrameRef.current = requestAnimationFrame(runAnalysis);
-        }
       };
 
+      // 2초마다 분석 실행 (부드러운 전환을 위해)
+      analysisIntervalRef.current = setInterval(runAnalysis, 2000);
+      
+      // 초기 분석 실행
       runAnalysis();
-    } else if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
+    } else {
+      if (analysisIntervalRef.current) {
+        clearInterval(analysisIntervalRef.current);
+        analysisIntervalRef.current = null;
+      }
     }
 
     return () => {
-      isActive = false;
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (analysisIntervalRef.current) {
+        clearInterval(analysisIntervalRef.current);
+        analysisIntervalRef.current = null;
       }
     };
   }, [isAnalyzing, isAudioOn, isVideoOn]);
@@ -492,6 +505,9 @@ export default function VideoCallEmotionAnalysis({
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      if (analysisIntervalRef.current) {
+        clearInterval(analysisIntervalRef.current);
+      }
     };
   }, [stream, stopRecordingTimer]);
 
@@ -561,7 +577,7 @@ export default function VideoCallEmotionAnalysis({
                        currentEmotion.emotion === 'neutral' ? '중립' : '감정 분석 중'}
                     </div>
                     <div className="text-xs text-gray-300">
-                      신뢰도: {Math.round(confidence * 100)}%
+                      신뢰도: {Math.round(displayedConfidence * 100)}%
                     </div>
                   </div>
                 </div>
@@ -577,31 +593,31 @@ export default function VideoCallEmotionAnalysis({
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="bg-blue-500 bg-opacity-20 rounded p-2">
                     <div className="font-medium text-blue-300">긍정성</div>
-                    <div className="text-lg font-bold">{Math.round(currentEmotion.vadScore.valence * 100)}%</div>
+                    <div className="text-lg font-bold">{Math.round(displayedVAD.valence * 100)}%</div>
                     <div className="w-full bg-blue-500 bg-opacity-30 rounded-full h-1 mt-1">
                       <div 
-                        className="bg-blue-400 h-1 rounded-full transition-all duration-300" 
-                        style={{ width: `${currentEmotion.vadScore.valence * 100}%` }}
+                        className="bg-blue-400 h-1 rounded-full transition-all duration-500" 
+                        style={{ width: `${displayedVAD.valence * 100}%` }}
                       />
                     </div>
                   </div>
                   <div className="bg-red-500 bg-opacity-20 rounded p-2">
                     <div className="font-medium text-red-300">각성도</div>
-                    <div className="text-lg font-bold">{Math.round(currentEmotion.vadScore.arousal * 100)}%</div>
+                    <div className="text-lg font-bold">{Math.round(displayedVAD.arousal * 100)}%</div>
                     <div className="w-full bg-red-500 bg-opacity-30 rounded-full h-1 mt-1">
                       <div 
-                        className="bg-red-400 h-1 rounded-full transition-all duration-300" 
-                        style={{ width: `${currentEmotion.vadScore.arousal * 100}%` }}
+                        className="bg-red-400 h-1 rounded-full transition-all duration-500" 
+                        style={{ width: `${displayedVAD.arousal * 100}%` }}
                       />
                     </div>
                   </div>
                   <div className="bg-purple-500 bg-opacity-20 rounded p-2">
                     <div className="font-medium text-purple-300">지배성</div>
-                    <div className="text-lg font-bold">{Math.round(currentEmotion.vadScore.dominance * 100)}%</div>
+                    <div className="text-lg font-bold">{Math.round(displayedVAD.dominance * 100)}%</div>
                     <div className="w-full bg-purple-500 bg-opacity-30 rounded-full h-1 mt-1">
                       <div 
-                        className="bg-purple-400 h-1 rounded-full transition-all duration-300" 
-                        style={{ width: `${currentEmotion.vadScore.dominance * 100}%` }}
+                        className="bg-purple-400 h-1 rounded-full transition-all duration-500" 
+                        style={{ width: `${displayedVAD.dominance * 100}%` }}
                       />
                     </div>
                   </div>
@@ -613,17 +629,17 @@ export default function VideoCallEmotionAnalysis({
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-300">감정 강도</span>
                   <span className="text-xs font-medium">
-                    {currentEmotion.vadScore.valence > 0.7 ? '매우 높음' :
-                     currentEmotion.vadScore.valence > 0.5 ? '높음' :
-                     currentEmotion.vadScore.valence > 0.3 ? '보통' : '낮음'}
+                    {displayedVAD.valence > 0.7 ? '매우 높음' :
+                     displayedVAD.valence > 0.5 ? '높음' :
+                     displayedVAD.valence > 0.3 ? '보통' : '낮음'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-300">에너지 레벨</span>
                   <span className="text-xs font-medium">
-                    {currentEmotion.vadScore.arousal > 0.7 ? '매우 활발' :
-                     currentEmotion.vadScore.arousal > 0.5 ? '활발' :
-                     currentEmotion.vadScore.arousal > 0.3 ? '보통' : '차분'}
+                    {displayedVAD.arousal > 0.7 ? '매우 활발' :
+                     displayedVAD.arousal > 0.5 ? '활발' :
+                     displayedVAD.arousal > 0.3 ? '보통' : '차분'}
                   </span>
                 </div>
               </div>
@@ -632,17 +648,17 @@ export default function VideoCallEmotionAnalysis({
               <div className="bg-white bg-opacity-10 rounded p-2">
                 <div className="text-xs text-gray-300 mb-1">실시간 피드백</div>
                 <div className="text-xs">
-                  {currentEmotion.emotion === 'happy' && currentEmotion.vadScore.valence > 0.7 ? 
+                  {currentEmotion.emotion === 'happy' && displayedVAD.valence > 0.7 ? 
                     '매우 긍정적인 감정이 감지되었습니다! 😊' :
-                   currentEmotion.emotion === 'sad' && currentEmotion.vadScore.valence < 0.3 ? 
+                   currentEmotion.emotion === 'sad' && displayedVAD.valence < 0.3 ? 
                     '슬픈 감정이 감지되었습니다. 괜찮으세요? 😔' :
-                   currentEmotion.emotion === 'angry' && currentEmotion.vadScore.arousal > 0.7 ? 
+                   currentEmotion.emotion === 'angry' && displayedVAD.arousal > 0.7 ? 
                     '분노한 감정이 감지되었습니다. 심호흡을 해보세요 😤' :
-                   currentEmotion.emotion === 'anxious' && currentEmotion.vadScore.arousal > 0.6 ? 
+                   currentEmotion.emotion === 'anxious' && displayedVAD.arousal > 0.6 ? 
                     '불안한 감정이 감지되었습니다. 편안히 호흡해보세요 😰' :
-                   currentEmotion.emotion === 'calm' && currentEmotion.vadScore.arousal < 0.4 ? 
+                   currentEmotion.emotion === 'calm' && displayedVAD.arousal < 0.4 ? 
                     '평온한 상태입니다. 좋은 감정을 유지하세요 😌' :
-                   currentEmotion.emotion === 'excited' && currentEmotion.vadScore.arousal > 0.6 ? 
+                   currentEmotion.emotion === 'excited' && displayedVAD.arousal > 0.6 ? 
                     '흥미진진한 감정이 감지되었습니다! 🎉' :
                    currentEmotion.emotion === 'surprised' ? 
                     '놀란 감정이 감지되었습니다! 😲' :
