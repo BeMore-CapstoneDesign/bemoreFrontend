@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { VADScore, EmotionAnalysis } from '../../types';
 import { emotionEmojis } from '../../utils/emotion';
+import { emotionRepository } from '../../services/repositories/emotionRepository';
 
 interface VideoCallEmotionAnalysisProps {
   onEmotionChange?: (emotion: EmotionAnalysis) => void;
@@ -63,6 +64,88 @@ export default function VideoCallEmotionAnalysis({
   const [displayedVAD, setDisplayedVAD] = useState<VADScore>({ valence: 0.5, arousal: 0.5, dominance: 0.5 });
   const [displayedConfidence, setDisplayedConfidence] = useState(0);
   const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // API 호출 상태 관리
+  const [apiStatus, setApiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [lastApiCall, setLastApiCall] = useState<Date | null>(null);
+
+  // 비디오 프레임 캡처 함수
+  const captureVideoFrame = useCallback(async (): Promise<File | null> => {
+    if (!videoRef.current || !canvasRef.current) return null;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return null;
+    
+    // 캔버스 크기를 비디오 크기에 맞춤
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // 비디오 프레임을 캔버스에 그리기
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // 캔버스를 Blob으로 변환
+    return new Promise<File | null>((resolve) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `frame_${Date.now()}.jpg`, { type: 'image/jpeg' });
+          resolve(file);
+        } else {
+          resolve(null);
+        }
+      }, 'image/jpeg', 0.8);
+    });
+  }, []);
+
+  // 오디오 청크 캡처 함수
+  const captureAudioChunk = useCallback((): File | null => {
+    if (!analyserRef.current || !isAudioOn) return null;
+    
+    // 간단한 오디오 데이터 캡처 (실제로는 MediaRecorder API 사용 권장)
+    const bufferLength = analyserRef.current.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    analyserRef.current.getByteFrequencyData(dataArray);
+    
+    // 오디오 데이터를 Blob으로 변환 (시뮬레이션)
+    const audioBlob = new Blob([dataArray], { type: 'audio/wav' });
+    return new File([audioBlob], `audio_${Date.now()}.wav`, { type: 'audio/wav' });
+  }, [isAudioOn]);
+
+  // 실제 백엔드 API 호출 함수
+  const callRealtimeAnalysisAPI = useCallback(async (): Promise<EmotionAnalysis | null> => {
+    try {
+      setApiStatus('loading');
+      setLastApiCall(new Date());
+      
+      const videoFrame = await captureVideoFrame();
+      const audioChunk = captureAudioChunk();
+      
+      if (!videoFrame && !audioChunk) {
+        console.warn('캡처할 데이터가 없습니다.');
+        setApiStatus('error');
+        return null;
+      }
+
+      const sessionId = `session_${Date.now()}`;
+      const timestamp = new Date().toISOString();
+
+      const result = await emotionRepository.analyzeRealtimeEmotion({
+        videoFrame: videoFrame || undefined,
+        audioChunk: audioChunk || undefined,
+        sessionId,
+        timestamp
+      });
+
+      setApiStatus('success');
+      return result;
+    } catch (error) {
+      console.error('실시간 분석 API 호출 실패:', error);
+      setApiStatus('error');
+      return null;
+    }
+  }, [captureVideoFrame, captureAudioChunk]);
 
   // 감정 통계 계산 함수
   const getEmotionStats = () => {
@@ -317,76 +400,119 @@ export default function VideoCallEmotionAnalysis({
   // 분석 루프 시작/중지
   useEffect(() => {
     if (isAnalyzing) {
-      const runAnalysis = () => {
-        let currentVoiceVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
-        let currentFacialVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
-
-        // 음성 분석
-        if (analyserRef.current && isAudioOn) {
-          const bufferLength = analyserRef.current.frequencyBinCount;
-          const dataArray = new Uint8Array(bufferLength);
-          const timeDataArray = new Uint8Array(bufferLength);
-
-          analyserRef.current.getByteFrequencyData(dataArray);
-          analyserRef.current.getByteTimeDomainData(timeDataArray);
-
-          const volumeLevel = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength / 255;
-          const pitchValue = calculatePitch(timeDataArray);
-          const rateValue = calculateSpeechRate(timeDataArray);
-
-          currentVoiceVAD = calculateVoiceVAD(volumeLevel, pitchValue, rateValue);
+      const runAnalysis = async () => {
+        // 실제 백엔드 API 호출 시도
+        let apiResult: EmotionAnalysis | null = null;
+        try {
+          apiResult = await callRealtimeAnalysisAPI();
+        } catch (error) {
+          console.warn('백엔드 API 호출 실패, 로컬 분석으로 폴백:', error);
         }
 
-        // 표정 분석 (간단한 시뮬레이션)
-        if (isVideoOn) {
-          currentFacialVAD = calculateFacialVAD();
-        }
+        // API 결과가 있으면 사용, 없으면 로컬 분석
+        if (apiResult) {
+          // 백엔드에서 받은 실제 결과 사용
+          const integratedVAD = apiResult.vadScore || { valence: 0.5, arousal: 0.5, dominance: 0.5 };
+          const emotion = apiResult.emotion || 'neutral';
+          const confidenceScore = apiResult.confidence || 0.5;
 
-        // 통합 VAD 점수 계산
-        const integratedVAD = calculateIntegratedVAD(currentFacialVAD, currentVoiceVAD);
-        const emotion = vadToEmotion(integratedVAD);
-        const confidenceScore = calculateConfidence(currentFacialVAD, currentVoiceVAD);
+          // 부드러운 전환을 위한 보간
+          setDisplayedVAD(prev => ({
+            valence: prev.valence * 0.7 + integratedVAD.valence * 0.3,
+            arousal: prev.arousal * 0.7 + integratedVAD.arousal * 0.3,
+            dominance: prev.dominance * 0.7 + integratedVAD.dominance * 0.3
+          }));
 
-        // 부드러운 전환을 위한 보간
-        setDisplayedVAD(prev => ({
-          valence: prev.valence * 0.7 + integratedVAD.valence * 0.3,
-          arousal: prev.arousal * 0.7 + integratedVAD.arousal * 0.3,
-          dominance: prev.dominance * 0.7 + integratedVAD.dominance * 0.3
-        }));
+          setDisplayedConfidence(prev => prev * 0.7 + confidenceScore * 0.3);
 
-        setDisplayedConfidence(prev => prev * 0.7 + confidenceScore * 0.3);
+          setCurrentEmotion(apiResult);
+          setConfidence(confidenceScore);
 
-        const emotionAnalysis: EmotionAnalysis = {
-          id: `realtime_${Date.now()}`,
-          userId: 'user123',
-          timestamp: new Date().toISOString(),
-          vadScore: integratedVAD,
-          emotion,
-          confidence: confidenceScore,
-          mediaType: 'realtime',
-          cbtFeedback: {
-            cognitiveDistortion: '실시간 분석 중',
-            challenge: '현재 감정 상태를 관찰해보세요',
-            alternative: '감정 변화를 자연스럽게 받아들이세요',
-            actionPlan: '정기적인 감정 체크를 해보세요'
+          // 감정 히스토리에 추가 (최근 20개만 유지)
+          setEmotionHistory(prev => {
+            const newHistory = [...prev, {
+              timestamp: Date.now(),
+              emotion,
+              valence: integratedVAD.valence
+            }];
+            return newHistory.slice(-20);
+          });
+
+          if (onEmotionChange) {
+            onEmotionChange(apiResult);
           }
-        };
+        } else {
+          // 로컬 분석 (폴백)
+          let currentVoiceVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
+          let currentFacialVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
 
-        setCurrentEmotion(emotionAnalysis);
-        setConfidence(confidenceScore);
+          // 음성 분석
+          if (analyserRef.current && isAudioOn) {
+            const bufferLength = analyserRef.current.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            const timeDataArray = new Uint8Array(bufferLength);
 
-        // 감정 히스토리에 추가 (최근 20개만 유지)
-        setEmotionHistory(prev => {
-          const newHistory = [...prev, {
-            timestamp: Date.now(),
+            analyserRef.current.getByteFrequencyData(dataArray);
+            analyserRef.current.getByteTimeDomainData(timeDataArray);
+
+            const volumeLevel = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength / 255;
+            const pitchValue = calculatePitch(timeDataArray);
+            const rateValue = calculateSpeechRate(timeDataArray);
+
+            currentVoiceVAD = calculateVoiceVAD(volumeLevel, pitchValue, rateValue);
+          }
+
+          // 표정 분석 (간단한 시뮬레이션)
+          if (isVideoOn) {
+            currentFacialVAD = calculateFacialVAD();
+          }
+
+          // 통합 VAD 점수 계산
+          const integratedVAD = calculateIntegratedVAD(currentFacialVAD, currentVoiceVAD);
+          const emotion = vadToEmotion(integratedVAD);
+          const confidenceScore = calculateConfidence(currentFacialVAD, currentVoiceVAD);
+
+          // 부드러운 전환을 위한 보간
+          setDisplayedVAD(prev => ({
+            valence: prev.valence * 0.7 + integratedVAD.valence * 0.3,
+            arousal: prev.arousal * 0.7 + integratedVAD.arousal * 0.3,
+            dominance: prev.dominance * 0.7 + integratedVAD.dominance * 0.3
+          }));
+
+          setDisplayedConfidence(prev => prev * 0.7 + confidenceScore * 0.3);
+
+          const emotionAnalysis: EmotionAnalysis = {
+            id: `realtime_${Date.now()}`,
+            userId: 'user123',
+            timestamp: new Date().toISOString(),
+            vadScore: integratedVAD,
             emotion,
-            valence: integratedVAD.valence
-          }];
-          return newHistory.slice(-20); // 최근 20개만 유지
-        });
+            confidence: confidenceScore,
+            mediaType: 'realtime',
+            cbtFeedback: {
+              cognitiveDistortion: '실시간 분석 중',
+              challenge: '현재 감정 상태를 관찰해보세요',
+              alternative: '감정 변화를 자연스럽게 받아들이세요',
+              actionPlan: '정기적인 감정 체크를 해보세요'
+            }
+          };
 
-        if (onEmotionChange) {
-          onEmotionChange(emotionAnalysis);
+          setCurrentEmotion(emotionAnalysis);
+          setConfidence(confidenceScore);
+
+          // 감정 히스토리에 추가 (최근 20개만 유지)
+          setEmotionHistory(prev => {
+            const newHistory = [...prev, {
+              timestamp: Date.now(),
+              emotion,
+              valence: integratedVAD.valence
+            }];
+            return newHistory.slice(-20);
+          });
+
+          if (onEmotionChange) {
+            onEmotionChange(emotionAnalysis);
+          }
         }
       };
 
@@ -408,7 +534,7 @@ export default function VideoCallEmotionAnalysis({
         analysisIntervalRef.current = null;
       }
     };
-  }, [isAnalyzing, isAudioOn, isVideoOn]);
+  }, [isAnalyzing, isAudioOn, isVideoOn, callRealtimeAnalysisAPI, onEmotionChange]);
 
   // 분석 토글
   const toggleAnalysis = useCallback(() => {
@@ -553,6 +679,23 @@ export default function VideoCallEmotionAnalysis({
           {isAnalyzing && (
             <div className="mt-2 text-xs text-gray-300">
               녹화 시간: {formatTime(recordingTime)}
+            </div>
+          )}
+          {/* API 상태 표시 */}
+          {isAnalyzing && (
+            <div className="mt-2 flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${
+                apiStatus === 'loading' ? 'bg-blue-400 animate-pulse' :
+                apiStatus === 'success' ? 'bg-green-400' :
+                apiStatus === 'error' ? 'bg-red-400' :
+                'bg-gray-400'
+              }`} />
+              <div className="text-xs text-gray-300">
+                {apiStatus === 'loading' && 'API 호출 중...'}
+                {apiStatus === 'success' && '백엔드 분석 완료'}
+                {apiStatus === 'error' && '로컬 분석 사용 중'}
+                {apiStatus === 'idle' && '분석 대기 중'}
+              </div>
             </div>
           )}
         </div>
