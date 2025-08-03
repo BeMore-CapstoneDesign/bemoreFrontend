@@ -2,7 +2,7 @@
 
 BeMore는 **NestJS 백엔드 + Next.js 프론트엔드** 기반으로 멀티모달 감정 분석, 인지행동치료(CBT) 피드백, 대화 리포트 PDF 생성까지 제공하는 현대적 심리 케어 서비스입니다.
 
-> 🎉 **최근 업데이트**: 영상 상담 감정 분석 UX 대폭 개선 및 오류 예방 규칙 체계화 완료!
+> �� **최근 업데이트**: 영상 상담 UX 대폭 개선, 카메라 좌우반전 해결, 오류 예방 규칙 체계화 완료!
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
@@ -22,6 +22,7 @@ BeMore는 **NestJS 백엔드 + Next.js 프론트엔드** 기반으로 멀티모�
 - [🚨 오류 예방](#-오류-예방)
 - [📚 API 문서](#-api-문서)
 - [🔧 트러블슈팅](#-트러블슈팅)
+- [📊 백엔드 연동 상태](#-백엔드-연동-상태)
 
 ---
 
@@ -54,11 +55,14 @@ BeMore는 **NestJS 백엔드 + Next.js 프론트엔드** 기반으로 멀티모�
 
 ## ✨ **주요 기능**
 
-### 🎥 **영상 상담 감정 분석**
+### 🎥 **영상 상담 감정 분석 (최신 개선사항)**
+- **원클릭 상담 시작**: "알겠습니다" 버튼으로 즉시 분석 시작
 - **실시간 화상 상담** 기반 감정 분석
-- **명확한 상태 표시**: 연결 중/연결됨/분석 중/일시정지/종료됨
+- **명확한 상태 표시**: 연결 중/연결됨/분석 중/종료됨
 - **녹화 시간 카운터**: 실시간 상담 시간 표시
-- **직관적 컨트롤**: 분석 시작/일시정지, 카메라/마이크 토글
+- **간소화된 컨트롤**: 카메라/마이크/전체화면/상담 종료
+- **깔끔한 UI**: 불필요한 버튼 제거, 중앙 영역 최적화
+- **카메라 좌우반전 해결**: 거울처럼 자연스러운 화면 표시
 - **상담 종료 후 자동 결과**: 분석 결과 모달 자동 표시
 
 ### 🤖 **AI 채팅 & 감정 분석**
@@ -127,7 +131,7 @@ DATABASE_URL="file:./dev.db"
 npm install
 npm run dev
 
-# 백엔드
+# 백엔드 (별도 터미널에서)
 npm install
 npm run start:dev
 ```
@@ -145,13 +149,11 @@ npm run start:dev
 ├── 📁 src/
 │   ├── 📁 app/                    # Next.js App Router
 │   │   ├── 📁 analysis/           # 감정 분석 페이지
-│   │   ├── 📁 chat/              # AI 채팅 페이지
 │   │   ├── 📁 history/           # 히스토리 페이지
 │   │   ├── 📁 profile/           # 마이페이지
 │   │   └── 📁 settings/          # 설정 페이지
 │   ├── 📁 components/            # React 컴포넌트
 │   │   ├── 📁 analysis/          # 감정 분석 컴포넌트
-│   │   ├── 📁 chat/             # 채팅 컴포넌트
 │   │   ├── 📁 layout/           # 레이아웃 컴포넌트
 │   │   └── 📁 ui/               # 공통 UI 컴포넌트
 │   ├── 📁 hooks/                # Custom Hooks
@@ -207,6 +209,20 @@ npm run start:dev
 "dev": "next dev --turbopack -p 3005",
 "build": "next build",
 "start": "next start -p 3005"
+```
+
+### **빌드 및 배포 워크플로우**
+```bash
+# 개발 중
+npm run dev     # 핫 리로드, 개발 모드
+
+# 배포 전 테스트
+npm run build   # 빌드 생성
+npm run start   # 프로덕션 서버 테스트
+
+# 코드 품질 검사
+npm run lint    # 린트 체크
+npx tsc --noEmit # 타입 체크
 ```
 
 ### **캐시 관리 전략**
@@ -275,6 +291,14 @@ if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
 }
 ```
 
+#### **4. Next.js 빌드 오류**
+```bash
+# 증상: Could not find a production build
+# 해결책: 올바른 실행 순서
+npm run build  # 1. 먼저 빌드
+npm run start  # 2. 그 다음 프로덕션 서버
+```
+
 ### **응급 상황 대응 체크리스트**
 1. **브라우저 하드 리프레시** (Cmd+Shift+R)
 2. **개발자 도구 콘솔 확인**
@@ -308,6 +332,18 @@ POST /api/emotion/analyze
 }
 ```
 
+### **실시간 감정 분석 API**
+```typescript
+// 실시간 멀티모달 감정 분석
+POST /api/emotion/analyze/realtime
+{
+  videoFrame: File;        // 실시간 비디오 프레임
+  audioChunk: File;        // 실시간 오디오 청크
+  sessionId: string;       // 상담 세션 ID
+  timestamp: string        // 분석 요청 시간
+}
+```
+
 ### **채팅 API**
 ```typescript
 // AI 채팅
@@ -324,6 +360,29 @@ POST /api/chat/send
   timestamp: string;
   emotion?: string;
 }
+```
+
+---
+
+## 📊 **백엔드 연동 상태**
+
+### **현재 상태**
+- ❌ **백엔드 서버**: 미실행 (포트 3000)
+- ❌ **실제 API 호출**: 없음 (모의 데이터 사용)
+- ✅ **프론트엔드**: 백엔드 연동 준비 완료
+
+### **필요한 백엔드 기능**
+1. **실시간 멀티모달 감정 분석 API**
+2. **상담 세션 관리 API**
+3. **감정 히스토리 API**
+4. **CBT 피드백 생성 API**
+
+### **백엔드 개발 요청사항**
+```bash
+# 백엔드 서버 실행
+cd ../bemore-backend
+npm install
+npm run start:dev  # 포트 3000에서 실행
 ```
 
 ---
@@ -349,6 +408,13 @@ npm run build
 ```bash
 # 타입 체크 실행
 npx tsc --noEmit
+```
+
+#### **환경 변수 오류**
+```bash
+# .env.local 파일 확인
+cat .env.local
+# NEXT_PUBLIC_API_URL=http://localhost:3000/api
 ```
 
 ### **성능 최적화**
