@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { ActionButton } from '../ui/ActionButton';
 import { 
@@ -397,7 +397,195 @@ export default function VideoCallEmotionAnalysis({
     return (facialConfidence * 0.6 + voiceConfidence * 0.4);
   };
 
+  // 감정 표시 컴포넌트 메모이제이션
+  const memoizedEmotionDisplay = useMemo(() => {
+    if (!currentEmotion || !isAnalyzing) return null;
 
+    return (
+      <div className="absolute top-4 right-4 bg-black bg-opacity-80 text-white px-4 py-3 rounded-xl backdrop-blur-sm min-w-[280px]">
+        <div className="space-y-3">
+          {/* 메인 감정 표시 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <span className="text-3xl">{emotionEmojis[currentEmotion.emotion as keyof typeof emotionEmojis] || '😐'}</span>
+              <div>
+                <div className="font-semibold text-lg">
+                  {currentEmotion.emotion === 'happy' ? '기쁨' : 
+                   currentEmotion.emotion === 'sad' ? '슬픔' :
+                   currentEmotion.emotion === 'angry' ? '분노' :
+                   currentEmotion.emotion === 'anxious' ? '불안' :
+                   currentEmotion.emotion === 'excited' ? '흥분' :
+                   currentEmotion.emotion === 'calm' ? '평온' :
+                   currentEmotion.emotion === 'surprised' ? '놀람' :
+                   currentEmotion.emotion === 'neutral' ? '중립' : '감정 분석 중'}
+                </div>
+                <div className="text-xs text-gray-300">
+                  신뢰도: {Math.round(displayedConfidence * 100)}%
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-300">실시간</div>
+              <div className="text-xs text-green-400">●</div>
+            </div>
+          </div>
+
+          {/* VAD 점수 표시 */}
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-gray-300">감정 세부 분석</div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="bg-blue-500 bg-opacity-20 rounded p-2">
+                <div className="font-medium text-blue-300">긍정성</div>
+                <div className="text-lg font-bold">{Math.round(displayedVAD.valence * 100)}%</div>
+                <div className="w-full bg-blue-500 bg-opacity-30 rounded-full h-1 mt-1">
+                  <div 
+                    className="bg-blue-400 h-1 rounded-full transition-all duration-500" 
+                    style={{ width: `${displayedVAD.valence * 100}%` }}
+                  />
+                </div>
+              </div>
+              <div className="bg-red-500 bg-opacity-20 rounded p-2">
+                <div className="font-medium text-red-300">각성도</div>
+                <div className="text-lg font-bold">{Math.round(displayedVAD.arousal * 100)}%</div>
+                <div className="w-full bg-red-500 bg-opacity-30 rounded-full h-1 mt-1">
+                  <div 
+                    className="bg-red-400 h-1 rounded-full transition-all duration-500" 
+                    style={{ width: `${displayedVAD.arousal * 100}%` }}
+                  />
+                </div>
+              </div>
+              <div className="bg-purple-500 bg-opacity-20 rounded p-2">
+                <div className="font-medium text-purple-300">지배성</div>
+                <div className="text-lg font-bold">{Math.round(displayedVAD.dominance * 100)}%</div>
+                <div className="w-full bg-purple-500 bg-opacity-30 rounded-full h-1 mt-1">
+                  <div 
+                    className="bg-purple-400 h-1 rounded-full transition-all duration-500" 
+                    style={{ width: `${displayedVAD.dominance * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 감정 강도 및 상태 */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-300">감정 강도</span>
+              <span className="text-xs font-medium">
+                {displayedVAD.valence > 0.7 ? '매우 높음' :
+                 displayedVAD.valence > 0.5 ? '높음' :
+                 displayedVAD.valence > 0.3 ? '보통' : '낮음'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-300">에너지 레벨</span>
+              <span className="text-xs font-medium">
+                {displayedVAD.arousal > 0.7 ? '매우 활발' :
+                 displayedVAD.arousal > 0.5 ? '활발' :
+                 displayedVAD.arousal > 0.3 ? '보통' : '차분'}
+              </span>
+            </div>
+          </div>
+
+          {/* 실시간 피드백 */}
+          <div className="bg-white bg-opacity-10 rounded p-2">
+            <div className="text-xs text-gray-300 mb-1">실시간 피드백</div>
+            <div className="text-xs">
+              {currentEmotion.emotion === 'happy' && displayedVAD.valence > 0.7 ? 
+                '매우 긍정적인 감정이 감지되었습니다! 😊' :
+               currentEmotion.emotion === 'sad' && displayedVAD.valence < 0.3 ? 
+                '슬픈 감정이 감지되었습니다. 괜찮으세요? 😔' :
+               currentEmotion.emotion === 'angry' && displayedVAD.arousal > 0.7 ? 
+                '분노한 감정이 감지되었습니다. 심호흡을 해보세요 😤' :
+               currentEmotion.emotion === 'anxious' && displayedVAD.arousal > 0.6 ? 
+                '불안한 감정이 감지되었습니다. 편안히 호흡해보세요 😰' :
+               currentEmotion.emotion === 'calm' && displayedVAD.arousal < 0.4 ? 
+                '평온한 상태입니다. 좋은 감정을 유지하세요 😌' :
+               currentEmotion.emotion === 'excited' && displayedVAD.arousal > 0.6 ? 
+                '흥미진진한 감정이 감지되었습니다! 🎉' :
+               currentEmotion.emotion === 'surprised' ? 
+                '놀란 감정이 감지되었습니다! 😲' :
+                '감정을 분석하고 있습니다...'}
+            </div>
+          </div>
+
+          {/* 감정 변화 추이 차트 */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-300">감정 변화 추이</span>
+              <button
+                onClick={() => setShowEmotionChart(!showEmotionChart)}
+                className="text-xs text-blue-300 hover:text-blue-200 transition-colors"
+              >
+                {showEmotionChart ? '숨기기' : '보기'}
+              </button>
+            </div>
+            {showEmotionChart && emotionHistory.length > 0 && (
+              <div className="bg-white bg-opacity-5 rounded p-2">
+                <div className="h-16 flex items-end justify-between space-x-1">
+                  {emotionHistory.slice(-10).map((entry, index) => {
+                    const height = Math.max(4, entry.valence * 60); // 최소 4px, 최대 60px
+                    const color = entry.valence > 0.7 ? 'bg-green-400' : 
+                                 entry.valence > 0.5 ? 'bg-yellow-400' : 
+                                 entry.valence > 0.3 ? 'bg-orange-400' : 'bg-red-400';
+                    return (
+                      <div key={index} className="flex-1 flex flex-col items-center">
+                        <div 
+                          className={`w-full ${color} rounded-t transition-all duration-300`}
+                          style={{ height: `${height}px` }}
+                        />
+                        <div className="text-[8px] text-gray-400 mt-1">
+                          {emotionEmojis[entry.emotion as keyof typeof emotionEmojis] || '😐'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="text-[8px] text-gray-400 text-center mt-1">
+                  최근 10초간 감정 변화
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 감정 통계 정보 */}
+          {emotionStats && emotionHistory.length > 5 && (
+            <div className="bg-white bg-opacity-5 rounded p-2">
+              <div className="text-xs text-gray-300 mb-2">분석 통계</div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">주요 감정:</span>
+                  <span className="font-medium">
+                    {emotionStats.mostFrequentEmotion === 'happy' ? '기쁨' : 
+                     emotionStats.mostFrequentEmotion === 'sad' ? '슬픔' :
+                     emotionStats.mostFrequentEmotion === 'angry' ? '분노' :
+                     emotionStats.mostFrequentEmotion === 'anxious' ? '불안' :
+                     emotionStats.mostFrequentEmotion === 'excited' ? '흥분' :
+                     emotionStats.mostFrequentEmotion === 'calm' ? '평온' :
+                     emotionStats.mostFrequentEmotion === 'surprised' ? '놀람' :
+                     emotionStats.mostFrequentEmotion === 'neutral' ? '중립' : '분석 중'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">평균 긍정성:</span>
+                  <span className="font-medium">
+                    {emotionStats.averageValence > 0.7 ? '매우 높음' :
+                     emotionStats.averageValence > 0.5 ? '높음' :
+                     emotionStats.averageValence > 0.3 ? '보통' : '낮음'}
+                    {' '}({Math.round(emotionStats.averageValence * 100)}%)
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">분석 샘플:</span>
+                  <span className="font-medium">{emotionStats.totalSamples}개</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }, [currentEmotion, isAnalyzing, displayedVAD, displayedConfidence, showEmotionChart, emotionHistory, emotionStats]);
 
   // 컴포넌트 마운트 시 초기화
   useEffect(() => {
@@ -527,11 +715,13 @@ export default function VideoCallEmotionAnalysis({
         }
       };
 
-      // 1초마다 분석 실행 (성능 최적화)
-      analysisIntervalRef.current = setInterval(runAnalysis, 1000);
+      // 2초마다 분석 실행 (성능 최적화)
+      analysisIntervalRef.current = setInterval(runAnalysis, 2000);
       
-      // 초기 분석 실행
-      runAnalysis();
+      // 초기 분석은 1초 후에 시작 (성능 최적화)
+      setTimeout(() => {
+        runAnalysis();
+      }, 1000);
     } else {
       if (analysisIntervalRef.current) {
         clearInterval(analysisIntervalRef.current);
@@ -659,7 +849,10 @@ export default function VideoCallEmotionAnalysis({
         <video
           ref={videoRef}
           className="w-full h-full object-cover transform scale-x-[-1]"
-          style={{ transform: 'scaleX(-1) !important' }}
+          style={{ 
+            transform: 'scaleX(-1) !important',
+            filter: 'hue-rotate(0deg)' // GPU 가속을 위한 추가 속성
+          }}
           autoPlay
           muted
           playsInline
@@ -711,191 +904,8 @@ export default function VideoCallEmotionAnalysis({
           )}
         </div>
 
-        {/* 현재 감정 표시 - 개선된 버전 */}
-        {currentEmotion && isAnalyzing && (
-          <div className="absolute top-4 right-4 bg-black bg-opacity-80 text-white px-4 py-3 rounded-xl backdrop-blur-sm min-w-[280px]">
-            <div className="space-y-3">
-              {/* 메인 감정 표시 */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="text-3xl">{emotionEmojis[currentEmotion.emotion as keyof typeof emotionEmojis] || '😐'}</span>
-                  <div>
-                    <div className="font-semibold text-lg">
-                      {currentEmotion.emotion === 'happy' ? '기쁨' : 
-                       currentEmotion.emotion === 'sad' ? '슬픔' :
-                       currentEmotion.emotion === 'angry' ? '분노' :
-                       currentEmotion.emotion === 'anxious' ? '불안' :
-                       currentEmotion.emotion === 'excited' ? '흥분' :
-                       currentEmotion.emotion === 'calm' ? '평온' :
-                       currentEmotion.emotion === 'surprised' ? '놀람' :
-                       currentEmotion.emotion === 'neutral' ? '중립' : '감정 분석 중'}
-                    </div>
-                    <div className="text-xs text-gray-300">
-                      신뢰도: {Math.round(displayedConfidence * 100)}%
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-gray-300">실시간</div>
-                  <div className="text-xs text-green-400">●</div>
-                </div>
-              </div>
-
-              {/* VAD 점수 표시 */}
-              <div className="space-y-2">
-                <div className="text-xs font-medium text-gray-300">감정 세부 분석</div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="bg-blue-500 bg-opacity-20 rounded p-2">
-                    <div className="font-medium text-blue-300">긍정성</div>
-                    <div className="text-lg font-bold">{Math.round(displayedVAD.valence * 100)}%</div>
-                    <div className="w-full bg-blue-500 bg-opacity-30 rounded-full h-1 mt-1">
-                      <div 
-                        className="bg-blue-400 h-1 rounded-full transition-all duration-500" 
-                        style={{ width: `${displayedVAD.valence * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="bg-red-500 bg-opacity-20 rounded p-2">
-                    <div className="font-medium text-red-300">각성도</div>
-                    <div className="text-lg font-bold">{Math.round(displayedVAD.arousal * 100)}%</div>
-                    <div className="w-full bg-red-500 bg-opacity-30 rounded-full h-1 mt-1">
-                      <div 
-                        className="bg-red-400 h-1 rounded-full transition-all duration-500" 
-                        style={{ width: `${displayedVAD.arousal * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="bg-purple-500 bg-opacity-20 rounded p-2">
-                    <div className="font-medium text-purple-300">지배성</div>
-                    <div className="text-lg font-bold">{Math.round(displayedVAD.dominance * 100)}%</div>
-                    <div className="w-full bg-purple-500 bg-opacity-30 rounded-full h-1 mt-1">
-                      <div 
-                        className="bg-purple-400 h-1 rounded-full transition-all duration-500" 
-                        style={{ width: `${displayedVAD.dominance * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 감정 강도 및 상태 */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-300">감정 강도</span>
-                  <span className="text-xs font-medium">
-                    {displayedVAD.valence > 0.7 ? '매우 높음' :
-                     displayedVAD.valence > 0.5 ? '높음' :
-                     displayedVAD.valence > 0.3 ? '보통' : '낮음'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-300">에너지 레벨</span>
-                  <span className="text-xs font-medium">
-                    {displayedVAD.arousal > 0.7 ? '매우 활발' :
-                     displayedVAD.arousal > 0.5 ? '활발' :
-                     displayedVAD.arousal > 0.3 ? '보통' : '차분'}
-                  </span>
-                </div>
-              </div>
-
-              {/* 실시간 피드백 */}
-              <div className="bg-white bg-opacity-10 rounded p-2">
-                <div className="text-xs text-gray-300 mb-1">실시간 피드백</div>
-                <div className="text-xs">
-                  {currentEmotion.emotion === 'happy' && displayedVAD.valence > 0.7 ? 
-                    '매우 긍정적인 감정이 감지되었습니다! 😊' :
-                   currentEmotion.emotion === 'sad' && displayedVAD.valence < 0.3 ? 
-                    '슬픈 감정이 감지되었습니다. 괜찮으세요? 😔' :
-                   currentEmotion.emotion === 'angry' && displayedVAD.arousal > 0.7 ? 
-                    '분노한 감정이 감지되었습니다. 심호흡을 해보세요 😤' :
-                   currentEmotion.emotion === 'anxious' && displayedVAD.arousal > 0.6 ? 
-                    '불안한 감정이 감지되었습니다. 편안히 호흡해보세요 😰' :
-                   currentEmotion.emotion === 'calm' && displayedVAD.arousal < 0.4 ? 
-                    '평온한 상태입니다. 좋은 감정을 유지하세요 😌' :
-                   currentEmotion.emotion === 'excited' && displayedVAD.arousal > 0.6 ? 
-                    '흥미진진한 감정이 감지되었습니다! 🎉' :
-                   currentEmotion.emotion === 'surprised' ? 
-                    '놀란 감정이 감지되었습니다! 😲' :
-                    '감정을 분석하고 있습니다...'}
-                </div>
-              </div>
-
-              {/* 감정 변화 추이 차트 */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-300">감정 변화 추이</span>
-                  <button
-                    onClick={() => setShowEmotionChart(!showEmotionChart)}
-                    className="text-xs text-blue-300 hover:text-blue-200 transition-colors"
-                  >
-                    {showEmotionChart ? '숨기기' : '보기'}
-                  </button>
-                </div>
-                {showEmotionChart && emotionHistory.length > 0 && (
-                  <div className="bg-white bg-opacity-5 rounded p-2">
-                    <div className="h-16 flex items-end justify-between space-x-1">
-                      {emotionHistory.slice(-10).map((entry, index) => {
-                        const height = Math.max(4, entry.valence * 60); // 최소 4px, 최대 60px
-                        const color = entry.valence > 0.7 ? 'bg-green-400' : 
-                                     entry.valence > 0.5 ? 'bg-yellow-400' : 
-                                     entry.valence > 0.3 ? 'bg-orange-400' : 'bg-red-400';
-                        return (
-                          <div key={index} className="flex-1 flex flex-col items-center">
-                            <div 
-                              className={`w-full ${color} rounded-t transition-all duration-300`}
-                              style={{ height: `${height}px` }}
-                            />
-                            <div className="text-[8px] text-gray-400 mt-1">
-                              {emotionEmojis[entry.emotion as keyof typeof emotionEmojis] || '😐'}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="text-[8px] text-gray-400 text-center mt-1">
-                      최근 10초간 감정 변화
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 감정 통계 정보 */}
-              {emotionStats && emotionHistory.length > 5 && (
-                <div className="bg-white bg-opacity-5 rounded p-2">
-                  <div className="text-xs text-gray-300 mb-2">분석 통계</div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">주요 감정:</span>
-                      <span className="font-medium">
-                        {emotionStats.mostFrequentEmotion === 'happy' ? '기쁨' : 
-                         emotionStats.mostFrequentEmotion === 'sad' ? '슬픔' :
-                         emotionStats.mostFrequentEmotion === 'angry' ? '분노' :
-                         emotionStats.mostFrequentEmotion === 'anxious' ? '불안' :
-                         emotionStats.mostFrequentEmotion === 'excited' ? '흥분' :
-                         emotionStats.mostFrequentEmotion === 'calm' ? '평온' :
-                         emotionStats.mostFrequentEmotion === 'surprised' ? '놀람' :
-                         emotionStats.mostFrequentEmotion === 'neutral' ? '중립' : '분석 중'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">평균 긍정성:</span>
-                      <span className="font-medium">
-                        {emotionStats.averageValence > 0.7 ? '매우 높음' :
-                         emotionStats.averageValence > 0.5 ? '높음' :
-                         emotionStats.averageValence > 0.3 ? '보통' : '낮음'}
-                        {' '}({Math.round(emotionStats.averageValence * 100)}%)
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">분석 샘플:</span>
-                      <span className="font-medium">{emotionStats.totalSamples}개</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {/* 현재 감정 표시 - 메모이제이션된 버전 */}
+        {memoizedEmotionDisplay}
 
         {/* 사용자 가이드 */}
         {showGuide && callStatus === 'connected' && (
@@ -911,7 +921,11 @@ export default function VideoCallEmotionAnalysis({
               <button
                 onClick={() => {
                   setShowGuide(false);
-                  // 바로 분석 시작
+                  // 즉시 카메라 반전 적용을 위한 강제 리렌더링
+                  if (videoRef.current) {
+                    videoRef.current.style.transform = 'scaleX(-1) !important';
+                  }
+                  // 바로 분석 시작 (부드럽게)
                   if (permissionGranted) {
                     setIsAnalyzing(true);
                     setCallStatus('analyzing');
