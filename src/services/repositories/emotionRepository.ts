@@ -120,6 +120,48 @@ class EmotionRepository {
     imageFile?: File;
     sessionId?: string;
   }): Promise<EmotionAnalysis> {
+    // 텍스트만 있는 경우 JSON 형식으로 요청
+    if (data.text && !data.audioFile && !data.imageFile) {
+      const response: AxiosResponse<ApiResponse<EmotionAnalysis>> = await this.api.post(
+        '/emotion/analyze/multimodal',
+        {
+          text: {
+            content: data.text
+          },
+          context: '일상 대화',
+          sessionId: data.sessionId || 'default-session'
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000,
+        }
+      );
+      
+      if (!response.data.success) {
+        throw new Error(response.data.error || '멀티모달 감정 분석에 실패했습니다.');
+      }
+      
+      // 백엔드 응답을 프론트엔드 형식으로 변환
+      const result = response.data.data!;
+      return {
+        ...result,
+        emotion: result.primaryEmotion || result.emotion,
+        id: result.id || `multimodal_${Date.now()}`,
+        userId: result.userId || 'user123',
+        timestamp: result.timestamp || new Date().toISOString(),
+        mediaType: result.mediaType || 'multimodal',
+        cbtFeedback: result.cbtFeedback || {
+          cognitiveDistortion: '멀티모달 감정 분석이 완료되었습니다',
+          challenge: '다양한 관점에서 감정을 바라보세요',
+          alternative: '감정은 복합적인 현상입니다',
+          actionPlan: '정기적인 감정 체크를 권장합니다'
+        }
+      };
+    }
+    
+    // 파일이 포함된 경우 FormData 형식으로 요청
     const formData = new FormData();
     
     if (data.text) formData.append('text', data.text);
