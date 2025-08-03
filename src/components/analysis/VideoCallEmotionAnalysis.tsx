@@ -12,8 +12,6 @@ import {
   Phone, 
   PhoneOff,
   Settings,
-  Maximize2,
-  Minimize2,
   MessageSquare,
   Brain,
   Activity
@@ -42,7 +40,6 @@ export default function VideoCallEmotionAnalysis({
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isAudioOn, setIsAudioOn] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentEmotion, setCurrentEmotion] = useState<EmotionAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -443,17 +440,6 @@ export default function VideoCallEmotionAnalysis({
     }
   }, [stream, isAudioOn]);
 
-  // 전체화면 토글
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  }, []);
-
   // 상담 종료
   const endCall = useCallback(() => {
     setCallStatus('ended');
@@ -813,17 +799,6 @@ export default function VideoCallEmotionAnalysis({
             >
               {isAudioOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
               <span className="text-xs">{isAudioOn ? '마이크 끄기' : '마이크 켜기'}</span>
-            </ActionButton>
-
-            {/* 전체화면 토글 */}
-            <ActionButton
-              variant="secondary"
-              size="sm"
-              onClick={toggleFullscreen}
-              className="flex flex-col items-center space-y-1"
-            >
-              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              <span className="text-xs">{isFullscreen ? '전체화면 해제' : '전체화면'}</span>
             </ActionButton>
 
             {/* 상담 종료 - 상담 시작 후에만 표시 */}
