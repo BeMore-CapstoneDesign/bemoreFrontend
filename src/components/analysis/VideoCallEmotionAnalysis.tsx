@@ -69,7 +69,7 @@ export default function VideoCallEmotionAnalysis({
   const [apiStatus, setApiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [lastApiCall, setLastApiCall] = useState<Date | null>(null);
 
-  // 비디오 프레임 캡처 함수
+  // 비디오 프레임 캡처 함수 (최적화)
   const captureVideoFrame = useCallback(async (): Promise<File | null> => {
     if (!videoRef.current || !canvasRef.current) return null;
     
@@ -79,14 +79,17 @@ export default function VideoCallEmotionAnalysis({
     
     if (!ctx) return null;
     
-    // 캔버스 크기를 비디오 크기에 맞춤
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // 캔버스 크기를 비디오 크기에 맞춤 (성능 최적화)
+    const width = Math.min(video.videoWidth, 640); // 최대 640px로 제한
+    const height = Math.min(video.videoHeight, 480); // 최대 480px로 제한
+    
+    canvas.width = width;
+    canvas.height = height;
     
     // 비디오 프레임을 캔버스에 그리기
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, width, height);
     
-    // 캔버스를 Blob으로 변환
+    // 캔버스를 Blob으로 변환 (품질 낮춤으로 성능 향상)
     return new Promise<File | null>((resolve) => {
       canvas.toBlob((blob) => {
         if (blob) {
@@ -95,7 +98,7 @@ export default function VideoCallEmotionAnalysis({
         } else {
           resolve(null);
         }
-      }, 'image/jpeg', 0.8);
+      }, 'image/jpeg', 0.6); // 품질을 0.6으로 낮춤
     });
   }, []);
 
@@ -131,12 +134,18 @@ export default function VideoCallEmotionAnalysis({
       const sessionId = `session_${Date.now()}`;
       const timestamp = new Date().toISOString();
 
-      const result = await emotionRepository.analyzeRealtimeEmotion({
-        videoFrame: videoFrame || undefined,
-        audioChunk: audioChunk || undefined,
-        sessionId,
-        timestamp
-      });
+      // 타임아웃을 2초로 줄여서 빠른 응답
+      const result = await Promise.race([
+        emotionRepository.analyzeRealtimeEmotion({
+          videoFrame: videoFrame || undefined,
+          audioChunk: audioChunk || undefined,
+          sessionId,
+          timestamp
+        }),
+        new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('API 타임아웃')), 2000)
+        )
+      ]);
 
       setApiStatus('success');
       return result;
@@ -416,15 +425,16 @@ export default function VideoCallEmotionAnalysis({
           const emotion = apiResult.emotion || 'neutral';
           const confidenceScore = apiResult.confidence || 0.5;
 
-          // 부드러운 전환을 위한 보간
+          // 부드러운 전환을 위한 보간 (더 빠른 반응)
           setDisplayedVAD(prev => ({
-            valence: prev.valence * 0.7 + integratedVAD.valence * 0.3,
-            arousal: prev.arousal * 0.7 + integratedVAD.arousal * 0.3,
-            dominance: prev.dominance * 0.7 + integratedVAD.dominance * 0.3
+            valence: prev.valence * 0.5 + integratedVAD.valence * 0.5,
+            arousal: prev.arousal * 0.5 + integratedVAD.arousal * 0.5,
+            dominance: prev.dominance * 0.5 + integratedVAD.dominance * 0.5
           }));
 
-          setDisplayedConfidence(prev => prev * 0.7 + confidenceScore * 0.3);
+          setDisplayedConfidence(prev => prev * 0.5 + confidenceScore * 0.5);
 
+          // 상태 업데이트를 한 번에 처리
           setCurrentEmotion(apiResult);
           setConfidence(confidenceScore);
 
@@ -442,7 +452,7 @@ export default function VideoCallEmotionAnalysis({
             onEmotionChange(apiResult);
           }
         } else {
-          // 로컬 분석 (폴백)
+          // 로컬 분석 (폴백) - 더 빠른 처리
           let currentVoiceVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
           let currentFacialVAD: VADScore = { valence: 0.5, arousal: 0.5, dominance: 0.5 };
 
@@ -472,14 +482,14 @@ export default function VideoCallEmotionAnalysis({
           const emotion = vadToEmotion(integratedVAD);
           const confidenceScore = calculateConfidence(currentFacialVAD, currentVoiceVAD);
 
-          // 부드러운 전환을 위한 보간
+          // 부드러운 전환을 위한 보간 (더 빠른 반응)
           setDisplayedVAD(prev => ({
-            valence: prev.valence * 0.7 + integratedVAD.valence * 0.3,
-            arousal: prev.arousal * 0.7 + integratedVAD.arousal * 0.3,
-            dominance: prev.dominance * 0.7 + integratedVAD.dominance * 0.3
+            valence: prev.valence * 0.5 + integratedVAD.valence * 0.5,
+            arousal: prev.arousal * 0.5 + integratedVAD.arousal * 0.5,
+            dominance: prev.dominance * 0.5 + integratedVAD.dominance * 0.5
           }));
 
-          setDisplayedConfidence(prev => prev * 0.7 + confidenceScore * 0.3);
+          setDisplayedConfidence(prev => prev * 0.5 + confidenceScore * 0.5);
 
           const emotionAnalysis: EmotionAnalysis = {
             id: `realtime_${Date.now()}`,
@@ -497,6 +507,7 @@ export default function VideoCallEmotionAnalysis({
             }
           };
 
+          // 상태 업데이트를 한 번에 처리
           setCurrentEmotion(emotionAnalysis);
           setConfidence(confidenceScore);
 
@@ -516,8 +527,8 @@ export default function VideoCallEmotionAnalysis({
         }
       };
 
-      // 2초마다 분석 실행 (부드러운 전환을 위해)
-      analysisIntervalRef.current = setInterval(runAnalysis, 2000);
+      // 1초마다 분석 실행 (성능 최적화)
+      analysisIntervalRef.current = setInterval(runAnalysis, 1000);
       
       // 초기 분석 실행
       runAnalysis();
