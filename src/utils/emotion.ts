@@ -20,6 +20,7 @@ export const emotionEmojis: Record<EmotionState, string> = {
   neutral: '😐',
   excited: '🤩',
   calm: '😌',
+  surprised: '😲',
 };
 
 // VAD 점수를 감정 상태로 변환

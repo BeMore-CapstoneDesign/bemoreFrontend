@@ -1,19 +1,24 @@
 // 감정 분석 결과 타입
 export interface EmotionAnalysis {
-  id: string;
-  userId: string;
-  timestamp: string; // ISO string
+  id?: string;
+  userId?: string;
+  timestamp?: string; // ISO string
   vadScore: {
     valence: number; // 긍정성 (0-1)
     arousal: number; // 각성도 (0-1)
     dominance: number; // 지배성 (0-1)
   };
-  emotion: string; // 주요 감정 (기쁨, 슬픔, 분노, 불안 등)
+  emotion?: string; // 주요 감정 (기쁨, 슬픔, 분노, 불안 등)
+  primaryEmotion?: string; // 백엔드 응답 필드
   confidence: number; // 분석 신뢰도 (0-1)
-  mediaType: 'image' | 'audio' | 'text' | 'realtime' | 'consultation';
+  mediaType?: 'image' | 'audio' | 'text' | 'realtime' | 'consultation';
   mediaUrl?: string;
   textContent?: string;
-  cbtFeedback: CBTFeedback;
+  cbtFeedback?: CBTFeedback;
+  // 백엔드 추가 필드
+  keywords?: string[];
+  intensity?: string;
+  textLength?: number;
 }
 
 // CBT 피드백 타입
@@ -32,7 +37,7 @@ export interface VADScore {
 }
 
 // 감정 상태 타입
-export type EmotionState = 'happy' | 'sad' | 'angry' | 'anxious' | 'neutral' | 'excited' | 'calm';
+export type EmotionState = 'happy' | 'sad' | 'angry' | 'anxious' | 'neutral' | 'excited' | 'calm' | 'surprised';
 
 // 감정 분석 요청 타입
 export interface EmotionAnalysisRequest {
