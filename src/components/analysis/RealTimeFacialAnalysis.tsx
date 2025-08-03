@@ -259,14 +259,9 @@ export default function RealTimeFacialAnalysis({
 
           {/* 컨트롤 */}
           <div className="flex justify-center">
-            <Button
-              onClick={toggleAnalysis}
-              variant={isAnalyzing ? 'outline' : 'primary'}
-              className={`px-6 ${isAnalyzing ? 'text-red-600 border-red-600 hover:bg-red-600 hover:text-white' : ''}`}
-            >
-              <Camera className="w-4 h-4 mr-2" />
-              {isAnalyzing ? '분석 중지' : '분석 시작'}
-            </Button>
+            <div className="text-sm text-gray-500 text-center">
+              카메라가 활성화되면 자동으로 분석이 시작됩니다
+            </div>
           </div>
 
           {/* 실시간 VAD 점수 */}
