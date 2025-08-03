@@ -541,12 +541,20 @@ export default function VideoCallEmotionAnalysis({
               <div className="text-lg font-semibold">🎥 영상 상담 감정 분석</div>
               <div className="text-sm text-gray-300 space-y-2">
                 <p>• 카메라와 마이크가 활성화되었습니다</p>
-                <p>• "분석 시작" 버튼을 클릭하여 감정 분석을 시작하세요</p>
+                <p>• "알겠습니다" 버튼을 클릭하면 바로 감정 분석이 시작됩니다</p>
                 <p>• 분석 중에는 실시간으로 감정이 표시됩니다</p>
                 <p>• 언제든지 "일시정지" 또는 "상담 종료"할 수 있습니다</p>
               </div>
               <button
-                onClick={() => setShowGuide(false)}
+                onClick={() => {
+                  setShowGuide(false);
+                  // 바로 분석 시작
+                  if (permissionGranted) {
+                    setIsAnalyzing(true);
+                    setCallStatus('analyzing');
+                    startRecordingTimer();
+                  }
+                }}
                 className="mt-4 px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark transition-colors"
               >
                 알겠습니다
@@ -583,16 +591,18 @@ export default function VideoCallEmotionAnalysis({
         {/* 컨트롤 바 */}
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 rounded-full px-8 py-4 backdrop-blur-sm">
           <div className="flex items-center space-x-4">
-            {/* 분석 토글 */}
-            <ActionButton
-              variant={isAnalyzing ? 'danger' : 'primary'}
-              size="sm"
-              onClick={toggleAnalysis}
-              className="flex flex-col items-center space-y-1"
-            >
-              <Brain className="w-4 h-4" />
-              <span className="text-xs">{isAnalyzing ? '일시정지' : '분석 시작'}</span>
-            </ActionButton>
+            {/* 분석 토글 - 상담 시작 후에만 표시 */}
+            {isAnalyzing && (
+              <ActionButton
+                variant="danger"
+                size="sm"
+                onClick={toggleAnalysis}
+                className="flex flex-col items-center space-y-1"
+              >
+                <Brain className="w-4 h-4" />
+                <span className="text-xs">일시정지</span>
+              </ActionButton>
+            )}
 
             {/* 비디오 토글 */}
             <ActionButton
@@ -627,16 +637,18 @@ export default function VideoCallEmotionAnalysis({
               <span className="text-xs">{isFullscreen ? '전체화면 해제' : '전체화면'}</span>
             </ActionButton>
 
-            {/* 상담 종료 */}
-            <ActionButton
-              variant="danger"
-              size="sm"
-              onClick={endCall}
-              className="flex flex-col items-center space-y-1"
-            >
-              <PhoneOff className="w-4 h-4" />
-              <span className="text-xs">상담 종료</span>
-            </ActionButton>
+            {/* 상담 종료 - 상담 시작 후에만 표시 */}
+            {isAnalyzing && (
+              <ActionButton
+                variant="danger"
+                size="sm"
+                onClick={endCall}
+                className="flex flex-col items-center space-y-1"
+              >
+                <PhoneOff className="w-4 h-4" />
+                <span className="text-xs">상담 종료</span>
+              </ActionButton>
+            )}
           </div>
         </div>
       </div>
