@@ -24,11 +24,15 @@ import { emotionEmojis, getEmotionAdvice } from '../utils/emotion';
 import { EmotionAnalysis } from '../types';
 
 // 클라이언트에서만 안전하게 시간 포맷
-function SafeTimeDisplay({ timestamp }: { timestamp: string }) {
+function SafeTimeDisplay({ timestamp }: { timestamp?: string }) {
   const [localTime, setLocalTime] = useState('');
   
   useEffect(() => {
-    setLocalTime(new Date(timestamp).toLocaleTimeString());
+    if (timestamp) {
+      setLocalTime(new Date(timestamp).toLocaleTimeString());
+    } else {
+      setLocalTime('-');
+    }
   }, [timestamp]);
   
   return <span>{localTime}</span>;

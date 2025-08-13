@@ -37,22 +37,30 @@ import {
 } from 'recharts';
 
 // 클라이언트에서만 안전하게 시간 포맷
-function SafeTimeDisplay({ timestamp }: { timestamp: string }) {
+function SafeTimeDisplay({ timestamp }: { timestamp?: string }) {
   const [localTime, setLocalTime] = useState('');
   
   React.useEffect(() => {
-    setLocalTime(new Date(timestamp).toLocaleTimeString());
+    if (timestamp) {
+      setLocalTime(new Date(timestamp).toLocaleTimeString());
+    } else {
+      setLocalTime('-');
+    }
   }, [timestamp]);
   
   return <span>{localTime}</span>;
 }
 
 // 클라이언트에서만 안전하게 날짜 포맷
-function SafeDateDisplay({ timestamp }: { timestamp: string }) {
+function SafeDateDisplay({ timestamp }: { timestamp?: string }) {
   const [localDate, setLocalDate] = useState('');
   
   React.useEffect(() => {
-    setLocalDate(new Date(timestamp).toLocaleDateString());
+    if (timestamp) {
+      setLocalDate(new Date(timestamp).toLocaleDateString());
+    } else {
+      setLocalDate('-');
+    }
   }, [timestamp]);
   
   return <span>{localDate}</span>;
@@ -91,9 +99,10 @@ export default function AdvancedEmotionDashboard({
       month: 30 * 24 * 60 * 60 * 1000
     };
     
-    return emotionHistory.filter(item => 
-      now.getTime() - new Date(item.timestamp).getTime() < periods[selectedPeriod]
-    );
+    return emotionHistory.filter(item => {
+      if (!item.timestamp) return false;
+      return now.getTime() - new Date(item.timestamp).getTime() < periods[selectedPeriod];
+    });
   }, [emotionHistory, selectedPeriod]);
 
   // 감정 통계
@@ -112,7 +121,8 @@ export default function AdvancedEmotionDashboard({
 
     // 감정별 카운트
     filteredData.forEach(item => {
-      stats.emotions[item.emotion] = (stats.emotions[item.emotion] || 0) + 1;
+      const key = item.emotion ?? 'unknown';
+      stats.emotions[key] = (stats.emotions[key] || 0) + 1;
     });
 
     // 평균 VAD 점수

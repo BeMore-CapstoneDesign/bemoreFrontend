@@ -62,7 +62,7 @@ export const useUIStore = create<UIState>()(
         
         getEmotionColor: () => {
           const { currentEmotion } = get();
-          const emotionColors = {
+          const emotionColors: Record<string, string> = {
             happy: '#10B981',
             sad: '#3B82F6',
             angry: '#EF4444',
@@ -70,8 +70,9 @@ export const useUIStore = create<UIState>()(
             neutral: '#6B7280',
             excited: '#8B5CF6',
             calm: '#06B6D4',
+            surprised: '#F472B6',
           };
-          return emotionColors[currentEmotion];
+          return emotionColors[currentEmotion] ?? '#6B7280';
         },
       }),
       {

@@ -63,10 +63,10 @@ export default function HistoryPage() {
     const now = new Date();
     if (selectedPeriod === 'week') {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      filtered = filtered.filter(item => new Date(item.timestamp) >= weekAgo);
+      filtered = filtered.filter(item => !!item.timestamp && new Date(item.timestamp) >= weekAgo);
     } else if (selectedPeriod === 'month') {
       const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      filtered = filtered.filter(item => new Date(item.timestamp) >= monthAgo);
+      filtered = filtered.filter(item => !!item.timestamp && new Date(item.timestamp) >= monthAgo);
     }
 
     // 감정 필터
@@ -76,9 +76,10 @@ export default function HistoryPage() {
 
     // 검색 필터
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(item => 
-        item.emotion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.cbtFeedback.cognitiveDistortion.toLowerCase().includes(searchTerm.toLowerCase())
+        (item.emotion?.toLowerCase().includes(term) ?? false) ||
+        (item.cbtFeedback?.cognitiveDistortion?.toLowerCase().includes(term) ?? false)
       );
     }
 
@@ -110,7 +111,7 @@ export default function HistoryPage() {
 
   // 차트 데이터 준비
   const chartData = filteredHistory.map((item: EmotionAnalysis) => ({
-    date: new Date(item.timestamp).toLocaleDateString(),
+    date: (item.timestamp ? new Date(item.timestamp) : new Date(0)).toLocaleDateString(),
     valence: Math.round(item.vadScore.valence * 100),
     arousal: Math.round(item.vadScore.arousal * 100),
     dominance: Math.round(item.vadScore.dominance * 100),
@@ -118,7 +119,8 @@ export default function HistoryPage() {
   }));
 
   const emotionCounts = filteredHistory.reduce((acc, item) => {
-    acc[item.emotion] = (acc[item.emotion] || 0) + 1;
+    const key = item.emotion ?? 'unknown';
+    acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
@@ -399,7 +401,7 @@ export default function HistoryPage() {
                             {item.emotion}
                           </div>
                           <div className="text-sm text-gray-600">
-                            {new Date(item.timestamp).toLocaleString()}
+                            {item.timestamp ? new Date(item.timestamp).toLocaleString() : '-'}
                           </div>
                         </div>
                       </div>

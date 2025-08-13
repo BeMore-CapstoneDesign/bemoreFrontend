@@ -9,6 +9,7 @@ export const emotionColors: Record<EmotionState, string> = {
   neutral: '#6B7280', // gray
   excited: '#8B5CF6', // violet
   calm: '#06B6D4',  // cyan
+  surprised: '#F472B6', // pink
 };
 
 // 감정 상태에 따른 이모지 매핑
@@ -58,6 +59,7 @@ export function getEmotionGradient(emotion: EmotionState): string {
     neutral: 'from-gray-400 to-slate-500',
     excited: 'from-violet-400 to-purple-500',
     calm: 'from-cyan-400 to-blue-500',
+    surprised: 'from-pink-400 to-rose-500',
   };
   
   return colors[emotion];
@@ -102,6 +104,7 @@ export function getEmotionAdvice(emotion: EmotionState): string {
     neutral: '평온한 상태를 유지하고 계시네요. 이 균형을 잘 지켜보세요.',
     excited: '신나는 일이 있으셨군요! 이 에너지를 긍정적으로 활용해보세요.',
     calm: '차분하고 평온한 상태네요. 이 마음의 평화를 소중히 여기세요.',
+    surprised: '뜻밖의 상황이 있었나요? 상황을 차분히 정리하고 대응해보세요.',
   };
   
   return advice[emotion];
