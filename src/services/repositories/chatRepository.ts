@@ -16,13 +16,13 @@ class ChatRepository {
     });
   }
 
-  // AI 채팅 메시지 전송 (Gemini)
+  // AI 채팅 메시지 전송
   async sendChatMessage(data: {
     message: string;
     sessionId?: string;
     emotionContext?: any;
   }): Promise<ChatMessage> {
-    const response: AxiosResponse<ApiResponse<ChatMessage>> = await this.api.post('/chat/gemini', {
+    const response: AxiosResponse<ApiResponse<ChatMessage>> = await this.api.post('/chat/send', {
       message: data.message,
       sessionId: data.sessionId,
       emotionContext: data.emotionContext,

@@ -123,7 +123,7 @@ class EmotionRepository {
     // 텍스트만 있는 경우 JSON 형식으로 요청
     if (data.text && !data.audioFile && !data.imageFile) {
       const response: AxiosResponse<ApiResponse<EmotionAnalysis>> = await this.api.post(
-        '/emotion/analyze/multimodal',
+        '/emotion/analyze',
         {
           text: {
             content: data.text
@@ -176,7 +176,7 @@ class EmotionRepository {
     if (data.sessionId) formData.append('sessionId', data.sessionId);
     
     const response: AxiosResponse<ApiResponse<EmotionAnalysis>> = await this.api.post(
-      '/emotion/analyze/multimodal',
+      '/emotion/analyze',
       formData,
       {
         headers: {
