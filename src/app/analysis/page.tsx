@@ -32,7 +32,17 @@ import { emotionRepository } from '../../services/repositories/emotionRepository
 import { EmotionAnalysis } from '../../types';
 import { emotionEmojis } from '../../utils/emotion';
 const VideoCallEmotionAnalysis = dynamic(
-  () => import('../../components/analysis/VideoCallEmotionAnalysis'),
+  async () => {
+    // MediaPipe 스크립트 지연 로드
+    if (typeof window !== 'undefined') {
+      await Promise.all([
+        import('https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js'),
+        import('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js'),
+        import('https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js'),
+      ]);
+    }
+    return import('../../components/analysis/VideoCallEmotionAnalysis');
+  },
   { ssr: false, loading: () => <div className="text-center text-gray-600 py-8">영상 모듈 로딩 중...</div> }
 );
 
