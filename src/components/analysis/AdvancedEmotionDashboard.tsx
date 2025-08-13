@@ -16,25 +16,8 @@ import {
 } from 'lucide-react';
 import { EmotionAnalysis } from '../../types';
 import { emotionEmojis } from '../../utils/emotion';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar as RechartsRadar,
-  AreaChart,
-  Area
-} from 'recharts';
+import dynamic from 'next/dynamic';
+const Charts = dynamic(() => import('./AdvancedEmotionCharts'), { ssr: false, loading: () => <div className="text-center text-gray-500 py-6">차트 로딩 중...</div> });
 
 // 클라이언트에서만 안전하게 시간 포맷
 function SafeTimeDisplay({ timestamp }: { timestamp?: string }) {
@@ -343,46 +326,8 @@ export default function AdvancedEmotionDashboard({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-80">
-            {selectedChart === 'line' && (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="index" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="valence" stroke="#10B981" strokeWidth={2} name="긍정성" />
-                  <Line type="monotone" dataKey="arousal" stroke="#3B82F6" strokeWidth={2} name="각성도" />
-                  <Line type="monotone" dataKey="dominance" stroke="#8B5CF6" strokeWidth={2} name="지배성" />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-            
-            {selectedChart === 'radar' && (
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="subject" />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                  <RechartsRadar name="VAD 점수" dataKey="A" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
-                </RadarChart>
-              </ResponsiveContainer>
-            )}
-            
-            {selectedChart === 'area' && (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="index" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="valence" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} name="긍정성" />
-                  <Area type="monotone" dataKey="arousal" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} name="각성도" />
-                  <Area type="monotone" dataKey="dominance" stackId="1" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.6} name="지배성" />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+          {/* @ts-ignore */}
+          <Charts.TrendChart selectedChart={selectedChart} chartData={chartData} radarData={radarData} />
         </CardContent>
       </Card>
 
@@ -396,27 +341,8 @@ export default function AdvancedEmotionDashboard({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsPieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPieChart>
-              </ResponsiveContainer>
-            </div>
+            {/* @ts-ignore */}
+            <Charts.EmotionPie data={pieData} />
           </CardContent>
         </Card>
 
