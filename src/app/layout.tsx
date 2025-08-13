@@ -26,11 +26,13 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* MediaPipe 라이브러리: 전역 주입 제거 (필요 페이지에서 지연 로드) */}
+        {/* 보안 헤더는 next.config.ts headers에서 설정됨 */}
+        <link rel="preload" as="font" href="/_next/static/media/e4af272ccee01ff0-s.p.woff2" type="font/woff2" crossOrigin="anonymous" />
+        <a className="sr-only focus:not-sr-only" href="#main">Skip to content</a>
       </head>
       <body className={`${inter.className} ${notoSansKr.variable}`}>
         <ThemeProvider>
-          {children}
+          <main id="main">{children}</main>
         </ThemeProvider>
       </body>
     </html>

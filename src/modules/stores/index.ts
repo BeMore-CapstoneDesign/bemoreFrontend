@@ -1,28 +1,43 @@
-// 스토어 통합 관리
-export { useUserStore } from './userStore';
-export { useSessionStore } from './sessionStore';
-export { useUIStore } from './uiStore';
+// Deprecated: 기존 도메인 스토어 대체. 신규 코드는 `useAppStore`를 직접 사용하세요.
+import { useAppStore } from '../store';
 
-// 편의를 위한 통합 훅
-import { useUserStore } from './userStore';
-import { useSessionStore } from './sessionStore';
-import { useUIStore } from './uiStore';
+export const useUIStore = () => {
+  const theme = useAppStore(s => s.theme);
+  const isLoading = useAppStore(s => s.isLoading);
+  const setTheme = useAppStore(s => s.setTheme);
+  return { theme, isLoading, setTheme };
+};
 
-// 모든 스토어를 한 번에 사용할 수 있는 훅
+export const useSessionStore = () => {
+  const currentSession = useAppStore(s => s.currentSession);
+  const startSession = useAppStore(s => s.startSession);
+  const endSession = useAppStore(s => s.endSession);
+  const addEmotionAnalysis = useAppStore(s => s.addEmotionAnalysis);
+  const addChatMessage = useAppStore(s => s.addChatMessage);
+  return { currentSession, startSession, endSession, addEmotionAnalysis, addChatMessage };
+};
+
+export const useUserStore = () => {
+  const user = useAppStore(s => s.user);
+  const isAuthenticated = useAppStore(s => s.isAuthenticated);
+  const setUser = useAppStore(s => s.setUser);
+  const setAuthenticated = useAppStore(s => s.setAuthenticated);
+  return { user, isAuthenticated, setUser, setAuthenticated };
+};
+
+// 통합 훅 (하위 호환)
 export const useAppStores = () => {
   const user = useUserStore();
   const session = useSessionStore();
   const ui = useUIStore();
-  
   return {
     user,
     session,
     ui,
-    // 편의 메서드들
     isAuthenticated: user.isAuthenticated,
     currentUser: user.user,
     currentSession: session.currentSession,
     theme: ui.theme,
-    isLoading: user.isLoading || session.isLoading || ui.isLoading,
+    isLoading: ui.isLoading,
   };
-}; 
+};
