@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { AnalysisLayout } from '../../components/layout/AnalysisLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -30,7 +31,10 @@ import { useAppStore } from '../../modules/store';
 import { emotionRepository } from '../../services/repositories/emotionRepository';
 import { EmotionAnalysis } from '../../types';
 import { emotionEmojis } from '../../utils/emotion';
-import VideoCallEmotionAnalysis from '../../components/analysis/VideoCallEmotionAnalysis';
+const VideoCallEmotionAnalysis = dynamic(
+  () => import('../../components/analysis/VideoCallEmotionAnalysis'),
+  { ssr: false, loading: () => <div className="text-center text-gray-600 py-8">영상 모듈 로딩 중...</div> }
+);
 
 // 단순화된 워크플로우
 type SimpleWorkflow = 'ready' | 'analyzing' | 'result';
@@ -155,6 +159,15 @@ function ResultModal({
   onClose: () => void;
   onNewAnalysis: () => void;
 }) {
+  const closeBtnRef = React.useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    closeBtnRef.current?.focus();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
   const getEmotionText = (emotion: string) => {
     const emotionTexts: Record<string, string> = {
       happy: '기쁨',
@@ -185,14 +198,16 @@ function ResultModal({
   const emotionColor = emotionColors[result.emotion as keyof typeof emotionColors] || emotionColors.neutral;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="result-modal-title">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" tabIndex={-1}>
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">멀티모달 감정 분석 결과</h2>
+            <h2 id="result-modal-title" className="text-2xl font-bold text-gray-900">멀티모달 감정 분석 결과</h2>
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              ref={closeBtnRef}
+              aria-label="닫기"
             >
               <X className="w-6 h-6 text-gray-600" />
             </button>

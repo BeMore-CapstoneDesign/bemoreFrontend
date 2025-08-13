@@ -40,7 +40,7 @@ export const Navigation: React.FC = () => {
           {/* 메인 네비게이션 */}
           <div className="hidden md:flex items-center space-x-8">
             {navigationItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
               return (
                 <Link
                   key={item.name}
@@ -51,6 +51,7 @@ export const Navigation: React.FC = () => {
                       ? 'text-primary bg-primary/10 border border-primary/20'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   )}
+                  aria-current={isActive ? 'page' : undefined}
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.name}</span>
@@ -89,7 +90,7 @@ export const Navigation: React.FC = () => {
       <div className="md:hidden">
         <div className="px-2 pt-2 pb-3 space-y-1">
           {navigationItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
             return (
               <Link
                 key={item.name}
@@ -100,6 +101,7 @@ export const Navigation: React.FC = () => {
                     ? 'text-primary bg-primary/10 border border-primary/20'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 )}
+                aria-current={isActive ? 'page' : undefined}
               >
                 <item.icon className="w-5 h-5" />
                 <span>{item.name}</span>
