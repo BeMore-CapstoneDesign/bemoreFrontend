@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { useAppStore } from '../../modules/store';
 
 interface Props {
   children: ReactNode;
@@ -82,8 +83,9 @@ export function withErrorBoundary<P extends object>(
   onError?: (error: Error, errorInfo: ErrorInfo) => void
 ): React.FC<P> {
   return function WithErrorBoundary(props: P) {
+    const { setGlobalError } = useAppStore();
     return (
-      <ErrorBoundary fallback={fallback} onError={onError}>
+      <ErrorBoundary fallback={fallback} onError={(e, info) => { setGlobalError(e.message); onError?.(e, info); }}>
         <Component {...props} />
       </ErrorBoundary>
     );

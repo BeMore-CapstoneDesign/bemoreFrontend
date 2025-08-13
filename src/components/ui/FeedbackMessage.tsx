@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAppStore } from '../../modules/store';
 import { AlertCircle, CheckCircle, Info, X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -59,11 +60,12 @@ export const FeedbackMessage: React.FC<FeedbackMessageProps> = ({
   actionText,
   className
 }) => {
+  const { globalError, setGlobalError } = useAppStore();
   const styles = feedbackStyles[type];
   const Icon = icons[type];
 
   return (
-    <div className={cn(
+    <div role="status" aria-live="polite" className={cn(
       'border rounded-lg p-4 relative',
       styles.container,
       className
@@ -74,9 +76,9 @@ export const FeedbackMessage: React.FC<FeedbackMessageProps> = ({
           <h3 className={cn('font-medium', styles.title)}>
             {title}
           </h3>
-          {message && (
+          {(message || (type === 'error' && globalError)) && (
             <p className={cn('mt-1 text-sm', styles.message)}>
-              {message}
+              {message || globalError}
             </p>
           )}
           {onAction && actionText && (
@@ -92,6 +94,15 @@ export const FeedbackMessage: React.FC<FeedbackMessageProps> = ({
           <button
             onClick={onClose}
             className={cn('p-1 rounded-full hover:bg-black/5 transition-colors', styles.icon)}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+        {!onClose && type === 'error' && globalError && (
+          <button
+            onClick={() => setGlobalError(null)}
+            className={cn('p-1 rounded-full hover:bg-black/5 transition-colors', styles.icon)}
+            aria-label="닫기"
           >
             <X className="w-4 h-4" />
           </button>

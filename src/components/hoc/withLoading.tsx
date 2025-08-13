@@ -1,12 +1,12 @@
 import React from 'react';
-import { useUIStore } from '../../modules/stores';
+import { useAppStore } from '../../modules/store';
 
 export function withLoading<P extends object>(
   Component: React.ComponentType<P>,
   fallback?: React.ReactNode
 ): React.FC<P> {
   return function WithLoading(props: P) {
-    const { isLoading } = useUIStore();
+    const { isLoading } = useAppStore();
 
     if (isLoading) {
       if (fallback) {

@@ -20,6 +20,7 @@ interface AppState {
   theme: 'light' | 'dark' | 'auto';
   currentEmotion: EmotionState;
   isLoading: boolean;
+  globalError: string | null;
   
   // 액션들
   setUser: (user: UserProfile) => void;
@@ -31,6 +32,7 @@ interface AppState {
   setTheme: (theme: 'light' | 'dark' | 'auto') => void;
   setCurrentEmotion: (emotion: EmotionState) => void;
   setLoading: (loading: boolean) => void;
+  setGlobalError: (message: string | null) => void;
   clearSession: () => void;
 }
 
@@ -50,6 +52,7 @@ export const useAppStore = create<AppState>()(
         theme: 'auto',
         currentEmotion: 'neutral',
         isLoading: false,
+        globalError: null,
 
         // 액션들
         setUser: (user) => set({ user }),
@@ -101,6 +104,7 @@ export const useAppStore = create<AppState>()(
         setTheme: (theme) => set({ theme }),
         setCurrentEmotion: (emotion) => set({ currentEmotion: emotion }),
         setLoading: (loading) => set({ isLoading: loading }),
+        setGlobalError: (message) => set({ globalError: message }),
         
         clearSession: () => {
           set({
